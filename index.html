@@ -64,6 +64,10 @@
       .paramRadio input[type="radio"] {
         accent-color: #0000FF;
       }
+      /* Style all sliders with the same accent color */
+      input[type="range"] {
+        accent-color: #0000FF;
+      }
       .paramContainer {
         margin-top: 4px;
         display: none; /* Hidden until "on" is selected */
@@ -105,8 +109,9 @@
       <div class="parameter">
         <div class="paramHeader">Interaction Mode:</div>
         <div id="interactionRadioGroup"></div>
-        <div class="paramDesc">Select "Rotate" to move the camera; "Drag" to pick individual points.
-          (For best dragging results, click "Reset Orientation" first.)
+        <div class="paramDesc">
+          Select "Rotate" to move the camera; "Drag" to pick individual points.
+          (For best dragging, click "Reset Orientation" first.)
         </div>
       </div>
 
@@ -114,7 +119,9 @@
       <div class="parameter">
         <div class="paramHeader">Pinning Mode:</div>
         <div id="pinningRadio"></div>
-        <div class="paramDesc">Choose whether the cloth is pinned along the top edge or at its four corners.</div>
+        <div class="paramDesc">
+          Choose whether the cloth is pinned along the top edge or at its four corners.
+        </div>
       </div>
 
       <!-- Damping -->
@@ -528,35 +535,35 @@
             let G = vertical[y][x];
             let H = vertical[y][x+1];
             let I = centers[y][x];
-      
+
             addConstraint(A, E, distBetween(A, E));
             addConstraint(E, I, distBetween(E, I));
             addConstraint(I, A, distBetween(I, A));
-      
+
             addConstraint(A, G, distBetween(A, G));
             addConstraint(G, I, distBetween(G, I));
             addConstraint(I, A, distBetween(I, A));
-      
+
             addConstraint(B, E, distBetween(B, E));
             addConstraint(E, I, distBetween(E, I));
             addConstraint(I, B, distBetween(I, B));
-      
+
             addConstraint(B, H, distBetween(B, H));
             addConstraint(H, I, distBetween(H, I));
             addConstraint(I, B, distBetween(I, B));
-      
+
             addConstraint(C, G, distBetween(C, G));
             addConstraint(G, I, distBetween(G, I));
             addConstraint(I, C, distBetween(I, C));
-      
+
             addConstraint(C, F, distBetween(C, F));
             addConstraint(F, I, distBetween(F, I));
             addConstraint(I, C, distBetween(I, C));
-      
+
             addConstraint(D, H, distBetween(D, H));
             addConstraint(H, I, distBetween(H, I));
             addConstraint(I, D, distBetween(I, D));
-      
+
             addConstraint(D, F, distBetween(D, F));
             addConstraint(F, I, distBetween(F, I));
             addConstraint(I, D, distBetween(I, D));
@@ -685,7 +692,7 @@
         }
       }
 
-      // Simple unproject (assuming default camera)
+      // Simple unproject function (assumes default camera)
       function unproject(mx, my, fixedZ) {
         let d = (height/2) / tan(PI*30/180);
         let nx = mx - width/2;
@@ -721,7 +728,6 @@
           doResetOrientation = false;
         }
       
-        // Only enable orbitControl if in "rotate" mode.
         if (interactionMode === "rotate") {
           orbitControl();
         }
