@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>3D Cloth Simulation – Cylinder on Ground Plane</title>
+    <title>3D Cloth Simulation – Plane & Draped (Sphere or Taller Cylinder)</title>
     <!-- p5.js library -->
     <script src="https://cdn.jsdelivr.net/npm/p5@1.5.0/lib/p5.min.js"></script>
     <style>
@@ -99,8 +99,8 @@
     <div id="uiPanel">
       <h2>3D Cloth Simulation</h2>
       <p>
-        In this version, the cylinder is on the ground plane (y=0).<br>
-        The cloth is pinned at the cylinder's top (y=300), so it drapes down.
+        Two main simulation modes: <strong>Plane</strong> or <strong>Draped</strong>.<br>
+        In Draped mode, choose <strong>Sphere</strong> or <strong>Cylinder</strong> for the cloth to drape over.
       </p>
 
       <!-- Simulation Mode -->
@@ -109,16 +109,16 @@
         <div id="simModeRadio"></div>
         <div class="paramDesc">
           <strong>Plane</strong>: pinned cloth in free space.<br>
-          <strong>Draped</strong>: cloth drapes over a form (Sphere or Cylinder).
+          <strong>Draped</strong>: cloth drapes over a form (sphere or cylinder).
         </div>
       </div>
 
-      <!-- Form Mode -->
-      <div class="parameter">
+      <!-- Form Mode (only relevant in Draped mode) -->
+      <div class="parameter" id="formModeParam">
         <div class="paramHeader">Form Mode:</div>
         <div id="formModeRadio"></div>
         <div class="paramDesc">
-          Choose <strong>Sphere</strong> or <strong>Cylinder</strong> as the underlying form.
+          Choose <strong>Sphere</strong> or <strong>Cylinder</strong> (dark gray) as the underlying form.
         </div>
       </div>
 
@@ -127,12 +127,12 @@
         <div class="paramHeader">Interaction Mode:</div>
         <div id="interactionRadioGroup"></div>
         <div class="paramDesc">
-          "Rotate" = move camera; "Drag" = pick cloth points.
-          (Reset Orientation recommended before dragging.)
+          "Rotate" = move the camera; "Drag" = pick cloth points.<br>
+          (Use "Reset Orientation" first for best dragging.)
         </div>
       </div>
 
-      <!-- Pinning Mode (Plane only) -->
+      <!-- Pinning Mode (only for Plane mode) -->
       <div class="parameter">
         <div class="paramHeader">Pinning Mode:</div>
         <div id="pinningRadio"></div>
@@ -185,7 +185,7 @@
         <div class="paramRadio" id="bendingRadioGroup"></div>
         <div id="bendingContainer" class="paramContainer">
           <div id="bendingSlider"></div>
-          <div class="paramDesc">Controls resistance to sharp folds (Off = 1.0).</div>
+          <div class="paramDesc">Resistance to sharp folds (Off = 1.0).</div>
         </div>
       </div>
 
@@ -275,15 +275,16 @@
       let sphereCenter = { x: 0, y: 0, z: 0 };
       let sphereRadius = 100;
 
-      /* CYLINDER for Draped mode:
-         Cylinder sits on ground plane at y=0, top at y=300. */
+      /* CYLINDER parameters for Draped mode */
+      // We'll define a cylinder centered so that its top face is at y=-50 and bottom at y=-350,
+      // making it appear taller & higher in the scene.
       let cylRadius = 100;
       let cylHeight = 300;
-      let cylinderBottomY = 0;         // ground plane
-      let cylinderTopY = cylinderBottomY + cylHeight; // 300
+      let cylinderTopY = -50;           // top face at y = -50
+      let cylinderBottomY = cylinderTopY - cylHeight; // bottom face at y = -350
 
-      /* Ground plane at y=0, cloth can't go below 0. */
-      let groundY = 0;
+      /* Invisible floor for Draped mode */
+      let floorY = 150; // cloth cannot go below y = 150
 
       /* SIMULATION PARAMETERS (default) */
       let damping = 0.98;
@@ -327,16 +328,16 @@
       let simulationMode = "plane";    // "plane" or "draped"
       let formMode = "sphere";         // For Draped mode: "sphere" or "cylinder"
 
-      /* CLOTH POSITIONING SHIFT */
+      /* CLOTH POSITIONING */
       let clothShiftX = -40;
 
       /* ORIENTATION RESET FLAG */
       let doResetOrientation = false;
 
-      /* PLAY/PAUSE */
+      /* PLAY/PAUSE FLAG */
       let simulationRunning = true;
 
-      /* 3D DRAGGING */
+      /* 3D DRAGGING VARIABLES */
       let dragPointIndex = null;
       let dragPlaneZ = 0;
 
@@ -349,10 +350,11 @@
       }
 
       function createUI() {
-        // Buttons
+        // Reset Cloth and Reset Orientation buttons
         select("#resetBtn").mousePressed(setupCloth);
         select("#resetOrientationBtn").mousePressed(() => { doResetOrientation = true; });
 
+        // Play/Pause Simulation button
         const playPauseBtn = select("#playPauseBtn");
         playPauseBtn.mousePressed(() => {
           simulationRunning = !simulationRunning;
@@ -371,7 +373,7 @@
           setupCloth();
         });
 
-        // Form Mode radio
+        // Form Mode radio (only relevant in Draped mode)
         let formModeRadio = createRadio();
         formModeRadio.option("sphere", "Sphere");
         formModeRadio.option("cylinder", "Cylinder");
@@ -394,7 +396,7 @@
           interactionMode = interactionRadio.value();
         });
 
-        // Pinning Mode radio
+        // Pinning Mode radio (for Plane mode)
         let pinRadio = createRadio();
         pinRadio.option("top", "Top Pinned");
         pinRadio.option("corners", "Corner Pinned");
@@ -425,7 +427,7 @@
           });
         }
 
-        // Param toggles
+        // Attach toggles for each parameter
         attachParamRadio("dampingRadioGroup", (on) => { dampingOn = on; }, "dampingContainer");
         attachParamRadio("iterationsRadioGroup", (on) => { iterationsOn = on; }, "iterationsContainer");
         attachParamRadio("stretchRadioGroup", (on) => { stretchOn = on; }, "stretchContainer");
@@ -439,7 +441,7 @@
         attachParamRadio("gravityRadioGroup", (on) => { gravityOn = on; }, "gravityContainer");
         attachParamRadio("shadingRadioGroup", (on) => { shadingOn = on; }, null);
 
-        // Helper: slider
+        // Helper: Create slider
         function createSliderAndLabel(divId, callback, min, max, val, step) {
           const slider = createSlider(min, max, val, step);
           slider.parent(divId);
@@ -447,7 +449,7 @@
           callback(slider.value());
         }
 
-        // Sliders
+        // Sliders for each parameter
         createSliderAndLabel("dampingSlider", (val) => { damping = val; select("#dampingVal").html(nf(val, 1, 2)); }, 0.90, 1.0, 0.98, 0.01);
         createSliderAndLabel("iterationsSlider", (val) => { iterations = val; select("#iterationsVal").html(val); }, 1, 10, 5, 1);
         createSliderAndLabel("stretchSlider", (val) => { stretchFactor = val; select("#stretchVal").html(nf(val, 1, 2)); }, 0.8, 1.2, 1.0, 0.01);
@@ -461,6 +463,7 @@
         createSliderAndLabel("gravitySlider", (val) => { gravity = val; select("#gravityVal").html(nf(val, 1, 2)); }, 0, 1, 0.4, 0.01);
       }
 
+      /* Setup cloth based on simulation mode */
       function setupCloth() {
         clothPoints = [];
         clothConstraints = [];
@@ -479,42 +482,40 @@
           createClothPoints_Plane(startX, startY, 0);
 
         } else {
-          // Draped mode: check form
+          // Draped mode: check formMode
           if (formMode === "sphere") {
-            // Sphere on ground plane => we can place the sphere center at y=0
-            // Then the cloth pinned at y=-sphereRadius for top "pole" if you want
-            // or we can place the sphere so bottom at y=0, top at y=200, etc.
-            // But let's keep it simple: sphere center at y=100 so bottom at y=0
+            sphereCenter = { x: 0, y: 0, z: 0 };
             sphereRadius = 100;
-            sphereCenter = { x: 0, y: sphereRadius, z: 0 }; // so bottom is at y=0
-            let startY = sphereCenter.y + sphereRadius; // cloth pinned at top => y=200
+            // Cloth's Y = -sphereRadius
+            let startY = -sphereRadius;
             createClothPoints_Draped(-clothWidth/2, startY, -clothHeight/2);
 
-            // Pin center at top of sphere => y=200
+            // Pin the center cloth point to the top of the sphere
             let midRow = Math.floor(rows/2);
             let midCol = Math.floor(cols/2);
             let centerIdx = grid[midRow][midCol];
             clothPoints[centerIdx].pinned = true;
-            clothPoints[centerIdx].x = 0;
-            clothPoints[centerIdx].y = sphereCenter.y + sphereRadius; // 200
-            clothPoints[centerIdx].z = 0;
-            clothPoints[centerIdx].oldx = 0;
-            clothPoints[centerIdx].oldy = sphereCenter.y + sphereRadius;
-            clothPoints[centerIdx].oldz = 0;
+            clothPoints[centerIdx].x = sphereCenter.x;
+            clothPoints[centerIdx].y = sphereCenter.y - sphereRadius;
+            clothPoints[centerIdx].z = sphereCenter.z;
+            clothPoints[centerIdx].oldx = sphereCenter.x;
+            clothPoints[centerIdx].oldy = sphereCenter.y - sphereRadius;
+            clothPoints[centerIdx].oldz = sphereCenter.z;
 
           } else if (formMode === "cylinder") {
-            // Cylinder sits on ground plane at y=0, top at y=300
-            // Cloth pinned at top center => y=300
-            let startY = cylinderTopY; // 300
+            // Cylinder top face at y = cylinderTopY (e.g. -50)
+            // Cylinder bottom face at y = cylinderBottomY (e.g. -350)
+            // Place cloth so it starts at top face (y = cylinderTopY)
+            let startY = cylinderTopY;
             createClothPoints_Draped(-clothWidth/2, startY, -clothHeight/2);
 
-            // Pin center to top center => (0,300,0)
+            // Pin the center cloth point at the cylinder's top center
             let midRow = Math.floor(rows/2);
             let midCol = Math.floor(cols/2);
             let centerIdx = grid[midRow][midCol];
             clothPoints[centerIdx].pinned = true;
             clothPoints[centerIdx].x = 0;
-            clothPoints[centerIdx].y = cylinderTopY; // 300
+            clothPoints[centerIdx].y = cylinderTopY;
             clothPoints[centerIdx].z = 0;
             clothPoints[centerIdx].oldx = 0;
             clothPoints[centerIdx].oldy = cylinderTopY;
@@ -551,7 +552,7 @@
       }
 
       function createClothPoints_Draped(startX, fixedY, startZ) {
-        // In Draped mode, create cloth in XZ plane at the given Y
+        // In Draped mode, create cloth points in the XZ plane with a fixed Y
         for (let rz = 0; rz < rows; rz++) {
           grid[rz] = [];
           for (let cx = 0; cx < cols; cx++) {
@@ -578,9 +579,9 @@
             let idxB = grid[y][x+1];
             let A = clothPoints[idxA];
             let B = clothPoints[idxB];
-            let mx = (A.x + B.x)*0.5;
-            let my = (A.y + B.y)*0.5;
-            let mz = (A.z + B.z)*0.5;
+            let mx = (A.x + B.x) * 0.5;
+            let my = (A.y + B.y) * 0.5;
+            let mz = (A.z + B.z) * 0.5;
             clothPoints.push({
               x: mx, y: my, z: mz,
               oldx: mx, oldy: my, oldz: mz,
@@ -598,9 +599,9 @@
             let idxB = grid[y+1][x];
             let A = clothPoints[idxA];
             let B = clothPoints[idxB];
-            let mx = (A.x + B.x)*0.5;
-            let my = (A.y + B.y)*0.5;
-            let mz = (A.z + B.z)*0.5;
+            let mx = (A.x + B.x) * 0.5;
+            let my = (A.y + B.y) * 0.5;
+            let mz = (A.z + B.z) * 0.5;
             clothPoints.push({
               x: mx, y: my, z: mz,
               oldx: mx, oldy: my, oldz: mz,
@@ -622,9 +623,9 @@
             let B = clothPoints[idxB];
             let C = clothPoints[idxC];
             let D = clothPoints[idxD];
-            let mx = (A.x + B.x + C.x + D.x)*0.25;
-            let my = (A.y + B.y + C.y + D.y)*0.25;
-            let mz = (A.z + B.z + C.z + D.z)*0.25;
+            let mx = (A.x + B.x + C.x + D.x) * 0.25;
+            let my = (A.y + B.y + C.y + D.y) * 0.25;
+            let mz = (A.z + B.z + C.z + D.z) * 0.25;
             clothPoints.push({
               x: mx, y: my, z: mz,
               oldx: mx, oldy: my, oldz: mz,
@@ -642,42 +643,42 @@
           for (let x = 0; x < cols; x++) {
             let idx = grid[y][x];
             if (x < cols - 1) {
-              addConstraint(idx, grid[y][x+1], spacing*(stretchOn? stretchFactor : BASE_STRETCH));
+              addConstraint(idx, grid[y][x+1], spacing * (stretchOn ? stretchFactor : BASE_STRETCH));
             }
             if (y < rows - 1) {
-              addConstraint(idx, grid[y+1][x], spacing*(stretchOn? stretchFactor : BASE_STRETCH));
+              addConstraint(idx, grid[y+1][x], spacing * (stretchOn ? stretchFactor : BASE_STRETCH));
             }
           }
         }
         // Bending (two apart)
         for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols-2; x++) {
+          for (let x = 0; x < cols - 2; x++) {
             let idx1 = grid[y][x];
             let idx2 = grid[y][x+2];
-            addConstraint(idx1, idx2, spacing*2*(bendingOn? bendingFactor : BASE_BENDING));
+            addConstraint(idx1, idx2, spacing * 2 * (bendingOn ? bendingFactor : BASE_BENDING));
           }
         }
-        for (let y = 0; y < rows-2; y++) {
+        for (let y = 0; y < rows - 2; y++) {
           for (let x = 0; x < cols; x++) {
             let idx1 = grid[y][x];
             let idx2 = grid[y+2][x];
-            addConstraint(idx1, idx2, spacing*2*(bendingOn? bendingFactor : BASE_BENDING));
+            addConstraint(idx1, idx2, spacing * 2 * (bendingOn ? bendingFactor : BASE_BENDING));
           }
         }
         // Shear (diagonals)
-        for (let y = 0; y < rows-1; y++) {
-          for (let x = 0; x < cols-1; x++) {
+        for (let y = 0; y < rows - 1; y++) {
+          for (let x = 0; x < cols - 1; x++) {
             let idxA = grid[y][x];
             let idxB = grid[y][x+1];
             let idxC = grid[y+1][x];
             let idxD = grid[y+1][x+1];
-            addConstraint(idxA, idxD, sqrt(2)*spacing*(shearOn? shearFactor : BASE_SHEAR));
-            addConstraint(idxB, idxC, sqrt(2)*spacing*(shearOn? shearFactor : BASE_SHEAR));
+            addConstraint(idxA, idxD, sqrt(2) * spacing * (shearOn ? shearFactor : BASE_SHEAR));
+            addConstraint(idxB, idxC, sqrt(2) * spacing * (shearOn ? shearFactor : BASE_SHEAR));
           }
         }
         // Subdivide each cell into triangles
-        for (let y = 0; y < rows-1; y++) {
-          for (let x = 0; x < cols-1; x++) {
+        for (let y = 0; y < rows - 1; y++) {
+          for (let x = 0; x < cols - 1; x++) {
             let A = grid[y][x];
             let B = grid[y][x+1];
             let C = grid[y+1][x];
@@ -797,10 +798,10 @@
         if (simulationMode === "draped") {
           if (formMode === "sphere") {
             doSphereCollision();
-          } else {
+          } else if (formMode === "cylinder") {
             doCylinderCollision();
           }
-          doGroundCollision(); // cloth can't go below y=0
+          doFloorCollision();
         }
       }
 
@@ -835,7 +836,6 @@
       }
 
       function doSphereCollision() {
-        /* Sphere is placed so bottom is y=0, top is y=200 => center at y=100, radius=100. */
         const collisionFriction = 0.5;
         for (let p of clothPoints) {
           if (!p.pinned) {
@@ -851,7 +851,6 @@
               p.x += nx * overlap;
               p.y += ny * overlap;
               p.z += nz * overlap;
-              // friction
               p.oldx = p.x - collisionFriction * (p.x - p.oldx);
               p.oldy = p.y - collisionFriction * (p.y - p.oldy);
               p.oldz = p.z - collisionFriction * (p.z - p.oldz);
@@ -861,12 +860,13 @@
       }
 
       function doCylinderCollision() {
-        /* Cylinder: bottom y=0, top y=300, radius=100 */
         const collisionFriction = 0.5;
         for (let p of clothPoints) {
           if (!p.pinned) {
-            // 1. Check if p.y is between bottom(0) & top(300)
-            if (p.y > cylinderBottomY && p.y < cylinderTopY) {
+            // 1. Check if p.y is between top & bottom of cylinder
+            // top is cylinderTopY (e.g. -50), bottom is cylinderBottomY (e.g. -350)
+            if (p.y < cylinderTopY && p.y > cylinderBottomY) {
+              // 2. Check radial distance from y-axis
               let r = sqrt(p.x*p.x + p.z*p.z);
               if (r < cylRadius) {
                 let overlap = cylRadius - r;
@@ -883,12 +883,11 @@
         }
       }
 
-      function doGroundCollision() {
-        /* If cloth tries to go below y=0, clamp it. */
+      function doFloorCollision() {
         const collisionFriction = 0.5;
         for (let p of clothPoints) {
-          if (!p.pinned && p.y < groundY) {
-            p.y = groundY;
+          if (!p.pinned && p.y > floorY) {
+            p.y = floorY;
             p.oldy = p.y - collisionFriction * (p.y - p.oldy);
           }
         }
@@ -959,29 +958,32 @@
           updateCloth();
         }
 
+        // If draped mode, draw the chosen form + invisible floor
         if (simulationMode === "draped") {
           noStroke();
           fill("#222"); // dark gray
-
           if (formMode === "sphere") {
-            /* Sphere center at y=100, radius=100 => bottom at y=0, top at y=200 */
             push();
             translate(sphereCenter.x, sphereCenter.y, sphereCenter.z);
             sphere(sphereRadius);
             pop();
           } else {
-            /* Cylinder: bottom=0, top=300 => midpoint=150 */
+            // Cylinder
             push();
-            translate(0, cylinderBottomY + cylHeight/2, 0); // i.e. y=150
+            // We'll place the cylinder so top is at y=cylinderTopY, bottom at y=cylinderBottomY
+            // So we translate to the midpoint of top & bottom
+            let midY = (cylinderTopY + cylinderBottomY)/2; // e.g. -200
+            translate(0, midY, 0);
+            // height is cylinderTopY - cylinderBottomY = 300
             cylinder(cylRadius, cylHeight);
             pop();
           }
-          // The ground plane at y=0 is "invisible" but let's show it if you want:
-          // push();
-          // translate(0, 0, 0);
-          // fill("#111");
-          // plane(1000, 1000);
-          // pop();
+          // Draw invisible floor
+          push();
+          translate(0, floorY, 0);
+          noFill();
+          plane(1000, 1000);
+          pop();
         }
 
         if (shadingOn) {
@@ -994,8 +996,8 @@
             }
           }
           noStroke();
-          for (let y = 0; y < rows-1; y++) {
-            for (let x = 0; x < cols-1; x++) {
+          for (let y = 0; y < rows - 1; y++) {
+            for (let x = 0; x < cols - 1; x++) {
               let A = clothPoints[grid[y][x]];
               let B = clothPoints[grid[y][x+1]];
               let C = clothPoints[grid[y+1][x+1]];
