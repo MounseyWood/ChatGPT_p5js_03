@@ -60,13 +60,13 @@
         gap: 8px;
         margin-bottom: 4px;
       }
-      /* Use accent-color (supported in many modern browsers) to style radio buttons blue */
+      /* Set radio button accent color to match slider blue */
       .paramRadio input[type="radio"] {
-        accent-color: blue;
+        accent-color: dodgerblue;
       }
       .paramContainer {
         margin-top: 4px;
-        display: none; /* hidden by default until "on" is selected */
+        display: none; /* Hidden until "on" is selected */
       }
       .paramDesc {
         font-size: 12px;
@@ -99,7 +99,10 @@
       <h2>3D Cloth Simulation</h2>
       <p>
         Use the controls below to toggle parameters on or off.
-        Also, choose your Interaction Mode:
+        <br>
+        <strong>Interaction Mode:</strong> Choose "Rotate" to move the camera or "Drag" to move individual points.
+        <br>
+        For best dragging results, click "Reset Orientation" first.
       </p>
 
       <!-- Interaction Mode -->
@@ -113,7 +116,7 @@
       <div class="parameter">
         <div class="paramHeader">Pinning Mode:</div>
         <div id="pinningRadio"></div>
-        <div class="paramDesc">Choose whether the cloth is pinned along the top edge or only at its corners.</div>
+        <div class="paramDesc">Choose whether the cloth is pinned along the top edge or at its four corners.</div>
       </div>
 
       <!-- Damping -->
@@ -182,7 +185,7 @@
         <div class="paramRadio" id="windXRadioGroup"></div>
         <div id="windXContainer" class="paramContainer">
           <div id="windXSlider"></div>
-          <div class="paramDesc">Wind force along X (Off = 0).</div>
+          <div class="paramDesc">Wind force along the X-axis (Off = 0).</div>
         </div>
       </div>
 
@@ -192,7 +195,7 @@
         <div class="paramRadio" id="windYRadioGroup"></div>
         <div id="windYContainer" class="paramContainer">
           <div id="windYSlider"></div>
-          <div class="paramDesc">Wind force along Y (Off = 0).</div>
+          <div class="paramDesc">Wind force along the Y-axis (Off = 0).</div>
         </div>
       </div>
 
@@ -202,7 +205,7 @@
         <div class="paramRadio" id="windZRadioGroup"></div>
         <div id="windZContainer" class="paramContainer">
           <div id="windZSlider"></div>
-          <div class="paramDesc">Wind force along Z (Off = 0).</div>
+          <div class="paramDesc">Wind force along the Z-axis (Off = 0).</div>
         </div>
       </div>
 
@@ -212,7 +215,7 @@
         <div class="paramRadio" id="windBufRadioGroup"></div>
         <div id="windBufContainer" class="paramContainer">
           <div id="windBufSlider"></div>
-          <div class="paramDesc">Scales overall wind amplitude (Off = 1.0).</div>
+          <div class="paramDesc">Scales overall wind oscillation amplitude (Off = 1.0).</div>
         </div>
       </div>
 
@@ -312,7 +315,7 @@
         let r = createRadio();
         r.option("off", "Off");
         r.option("on", "On");
-        r.elt.name = parentId + "_radio"; // unique group name
+        r.elt.name = parentId + "_radio"; // unique name for each group
         r.parent(parentId);
         r.selected("off"); // default off
         r.changed(() => {
@@ -515,7 +518,7 @@
           }
         }
 
-        // 8. Subdivide each cell into triangles (as before)
+        // 8. Subdivide each cell into triangles (same as before)
         for (let y = 0; y < rows-1; y++) {
           for (let x = 0; x < cols-1; x++) {
             let A = grid[y][x];
@@ -646,23 +649,23 @@
               let overlap = spacing * 0.5 - d;
               let angle = atan2(dy, dx);
               if (!p1.pinned && !p2.pinned) {
-                p1.x -= cos(angle)*overlap*0.5;
-                p1.y -= sin(angle)*overlap*0.5;
-                p2.x += cos(angle)*overlap*0.5;
-                p2.y += sin(angle)*overlap*0.5;
+                p1.x -= cos(angle) * overlap * 0.5;
+                p1.y -= sin(angle) * overlap * 0.5;
+                p2.x += cos(angle) * overlap * 0.5;
+                p2.y += sin(angle) * overlap * 0.5;
               } else if (!p1.pinned && p2.pinned) {
-                p1.x -= cos(angle)*overlap;
-                p1.y -= sin(angle)*overlap;
+                p1.x -= cos(angle) * overlap;
+                p1.y -= sin(angle) * overlap;
               } else if (p1.pinned && !p2.pinned) {
-                p2.x += cos(angle)*overlap;
-                p2.y += sin(angle)*overlap;
+                p2.x += cos(angle) * overlap;
+                p2.y += sin(angle) * overlap;
               }
             }
           }
         }
       }
 
-      // 3D Dragging: When in "drag" mode, pick a point near the mouse click.
+      // 3D Dragging: In "drag" mode, select a point near the mouse click.
       function mousePressed() {
         if (interactionMode === "drag") {
           let closest = null;
@@ -684,7 +687,7 @@
         }
       }
 
-      // Convert screen coordinates to world coordinates (approximate)
+      // Simple unproject function (assumes default camera)
       function unproject(mx, my, fixedZ) {
         let d = (height/2) / tan(PI*30/180);
         let nx = mx - width/2;
@@ -720,7 +723,6 @@
           doResetOrientation = false;
         }
       
-        // Only enable orbitControl if in "rotate" mode.
         if (interactionMode === "rotate") {
           orbitControl();
         }
@@ -743,7 +745,7 @@
               let B = clothPoints[grid[y][x+1]];
               let C = clothPoints[grid[y+1][x+1]];
               let D = clothPoints[grid[y+1][x]];
-              let avgY = (A.y + B.y + C.y + D.y)*0.25;
+              let avgY = (A.y+B.y+C.y+D.y)*0.25;
               let bright = map(avgY, minY, maxY, 220, 80);
               fill(bright);
               beginShape();
