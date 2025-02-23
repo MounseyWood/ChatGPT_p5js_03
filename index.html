@@ -60,9 +60,9 @@
         gap: 8px;
         margin-bottom: 4px;
       }
-      /* Set radio button accent color to match slider blue */
+      /* Use web-safe blue (#0000FF) for radio buttons */
       .paramRadio input[type="radio"] {
-        accent-color: dodgerblue;
+        accent-color: #0000FF;
       }
       .paramContainer {
         margin-top: 4px;
@@ -99,17 +99,15 @@
       <h2>3D Cloth Simulation</h2>
       <p>
         Use the controls below to toggle parameters on or off.
-        <br>
-        <strong>Interaction Mode:</strong> Choose "Rotate" to move the camera or "Drag" to move individual points.
-        <br>
-        For best dragging results, click "Reset Orientation" first.
       </p>
 
       <!-- Interaction Mode -->
       <div class="parameter">
         <div class="paramHeader">Interaction Mode:</div>
         <div id="interactionRadioGroup"></div>
-        <div class="paramDesc">Select "Rotate" to move the camera; "Drag" to pick individual points.</div>
+        <div class="paramDesc">Select "Rotate" to move the camera; "Drag" to pick individual points.
+          (For best dragging results, click "Reset Orientation" first.)
+        </div>
       </div>
 
       <!-- Pinning Mode -->
@@ -215,7 +213,7 @@
         <div class="paramRadio" id="windBufRadioGroup"></div>
         <div id="windBufContainer" class="paramContainer">
           <div id="windBufSlider"></div>
-          <div class="paramDesc">Scales overall wind oscillation amplitude (Off = 1.0).</div>
+          <div class="paramDesc">Scales overall wind amplitude (Off = 1.0).</div>
         </div>
       </div>
 
@@ -315,7 +313,7 @@
         let r = createRadio();
         r.option("off", "Off");
         r.option("on", "On");
-        r.elt.name = parentId + "_radio"; // unique name for each group
+        r.elt.name = parentId + "_radio"; // unique group name
         r.parent(parentId);
         r.selected("off"); // default off
         r.changed(() => {
@@ -351,7 +349,7 @@
         interactionRadio.option("drag", "Drag");
         interactionRadio.selected("rotate");
         interactionRadio.elt.name = "interaction_radio";
-        interactionRadio.parent("uiPanel");
+        interactionRadio.parent("interactionRadioGroup");
         interactionRadio.changed(() => { interactionMode = interactionRadio.value(); });
 
         // Pinning mode radio buttons
@@ -649,16 +647,16 @@
               let overlap = spacing * 0.5 - d;
               let angle = atan2(dy, dx);
               if (!p1.pinned && !p2.pinned) {
-                p1.x -= cos(angle) * overlap * 0.5;
-                p1.y -= sin(angle) * overlap * 0.5;
-                p2.x += cos(angle) * overlap * 0.5;
-                p2.y += sin(angle) * overlap * 0.5;
+                p1.x -= cos(angle)*overlap*0.5;
+                p1.y -= sin(angle)*overlap*0.5;
+                p2.x += cos(angle)*overlap*0.5;
+                p2.y += sin(angle)*overlap*0.5;
               } else if (!p1.pinned && p2.pinned) {
-                p1.x -= cos(angle) * overlap;
-                p1.y -= sin(angle) * overlap;
+                p1.x -= cos(angle)*overlap;
+                p1.y -= sin(angle)*overlap;
               } else if (p1.pinned && !p2.pinned) {
-                p2.x += cos(angle) * overlap;
-                p2.y += sin(angle) * overlap;
+                p2.x += cos(angle)*overlap;
+                p2.y += sin(angle)*overlap;
               }
             }
           }
@@ -687,7 +685,7 @@
         }
       }
 
-      // Simple unproject function (assumes default camera)
+      // Simple unproject (assuming default camera)
       function unproject(mx, my, fixedZ) {
         let d = (height/2) / tan(PI*30/180);
         let nx = mx - width/2;
@@ -723,6 +721,7 @@
           doResetOrientation = false;
         }
       
+        // Only enable orbitControl if in "rotate" mode.
         if (interactionMode === "rotate") {
           orbitControl();
         }
@@ -767,7 +766,8 @@
         }
       
         noStroke();
-        fill(255, 0, 0);
+        // Use web-safe red (#FF0000) for cloth points.
+        fill("#FF0000");
         for (let p of clothPoints) {
           push();
           translate(p.x, p.y, p.z);
