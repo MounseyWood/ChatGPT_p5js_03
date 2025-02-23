@@ -94,8 +94,8 @@
     <div id="uiPanel">
       <h2>3D Cloth Simulation</h2>
       <p>
-        Click on the cloth (in the canvas) to drag points in 3D (on their fixed Z‐plane).
-        Use the radio buttons to toggle parameters On/Off.
+        Click on the cloth (in the canvas) to drag points in 3D (drag works on the fixed Z‐plane).
+        Use the radio buttons below to toggle parameters On/Off.
       </p>
 
       <!-- Pinning Mode (radio buttons) -->
@@ -105,7 +105,7 @@
         <div class="paramDesc">Choose whether the cloth is pinned along the top edge or only at its corners.</div>
       </div>
 
-      <!-- Damping -->
+      <!-- Damping Parameter -->
       <div class="parameter">
         <div class="paramHeader">Damping: <span id="dampingVal"></span></div>
         <div class="paramRadio" id="dampingRadio"></div>
@@ -115,17 +115,17 @@
         </div>
       </div>
 
-      <!-- Iterations -->
+      <!-- Iterations Parameter -->
       <div class="parameter">
         <div class="paramHeader">Iterations: <span id="iterationsVal"></span></div>
         <div class="paramRadio" id="iterationsRadio"></div>
         <div id="iterationsContainer" class="paramContainer">
           <div id="iterationsSlider"></div>
-          <div class="paramDesc">Constraint relaxations per frame. (Off = 1)</div>
+          <div class="paramDesc">Number of constraint relaxations per frame. (Off = 1)</div>
         </div>
       </div>
 
-      <!-- Stretch -->
+      <!-- Stretch Parameter -->
       <div class="parameter">
         <div class="paramHeader">Stretch: <span id="stretchVal"></span></div>
         <div class="paramRadio" id="stretchRadio"></div>
@@ -135,7 +135,7 @@
         </div>
       </div>
 
-      <!-- Shear -->
+      <!-- Shear Parameter -->
       <div class="parameter">
         <div class="paramHeader">Shear: <span id="shearVal"></span></div>
         <div class="paramRadio" id="shearRadio"></div>
@@ -145,7 +145,7 @@
         </div>
       </div>
 
-      <!-- Bending -->
+      <!-- Bending Parameter -->
       <div class="parameter">
         <div class="paramHeader">Bending: <span id="bendingVal"></span></div>
         <div class="paramRadio" id="bendingRadio"></div>
@@ -155,7 +155,7 @@
         </div>
       </div>
 
-      <!-- Weight -->
+      <!-- Weight Parameter -->
       <div class="parameter">
         <div class="paramHeader">Weight: <span id="weightVal"></span></div>
         <div class="paramRadio" id="weightRadio"></div>
@@ -165,7 +165,7 @@
         </div>
       </div>
 
-      <!-- Wind X -->
+      <!-- Wind X Parameter -->
       <div class="parameter">
         <div class="paramHeader">Wind X: <span id="windXVal"></span></div>
         <div class="paramRadio" id="windXRadio"></div>
@@ -175,7 +175,7 @@
         </div>
       </div>
 
-      <!-- Wind Y -->
+      <!-- Wind Y Parameter -->
       <div class="parameter">
         <div class="paramHeader">Wind Y: <span id="windYVal"></span></div>
         <div class="paramRadio" id="windYRadio"></div>
@@ -185,7 +185,7 @@
         </div>
       </div>
 
-      <!-- Wind Z -->
+      <!-- Wind Z Parameter -->
       <div class="parameter">
         <div class="paramHeader">Wind Z: <span id="windZVal"></span></div>
         <div class="paramRadio" id="windZRadio"></div>
@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- Wind Buffer -->
+      <!-- Wind Buffer Parameter -->
       <div class="parameter">
         <div class="paramHeader">Wind Buffer: <span id="windBufVal"></span></div>
         <div class="paramRadio" id="windBufRadio"></div>
@@ -205,7 +205,7 @@
         </div>
       </div>
 
-      <!-- Gravity -->
+      <!-- Gravity Parameter -->
       <div class="parameter">
         <div class="paramHeader">Gravity: <span id="gravityVal"></span></div>
         <div class="paramRadio" id="gravityRadio"></div>
@@ -215,11 +215,11 @@
         </div>
       </div>
 
-      <!-- Shading Mode -->
+      <!-- Shading Mode Parameter -->
       <div class="parameter">
         <div class="paramHeader">Shading Mode:</div>
         <div class="paramRadio" id="shadingRadio"></div>
-        <div class="paramDesc">Fills each cell with a gray-scale color based on its vertical position.</div>
+        <div class="paramDesc">Fills each cell with a gray-scale color based on vertical position.</div>
       </div>
 
       <div class="bottomButtons">
@@ -258,7 +258,7 @@
       const BASE_WINDBUFFER = 1.0;
       const BASE_GRAVITY = 0.0;
 
-      // Flags for each parameter
+      // Flags for each parameter (default off)
       let dampingOn = false;
       let iterationsOn = false;
       let stretchOn = false;
@@ -281,9 +281,9 @@
       // Orientation reset flag
       let doResetOrientation = false;
 
-      // For 3D dragging
+      // 3D dragging variables
       let dragPointIndex = null;
-      let dragPlaneZ = 0; // store the z value of the dragged point
+      let dragPlaneZ = 0;
 
       function setup() {
         let cnv = createCanvas(windowWidth - 280, windowHeight, WEBGL);
@@ -293,11 +293,13 @@
         setupCloth();
       }
 
-      // Helper: Create a radio group for a parameter with options "off" and "on"
+      // Helper: Create a radio group for a parameter with "off"/"on"
       function attachParamRadio(parentId, setFlag, containerId) {
         let r = createRadio();
         r.option("off", "Off");
         r.option("on", "On");
+        // Set unique name so groups don't interfere
+        r.elt.name = parentId;
         r.parent(parentId);
         r.selected("off"); // default off
         r.changed(() => {
@@ -314,7 +316,7 @@
         });
       }
 
-      // Helper: Create slider, attach callback
+      // Helper: Create a slider and attach callback
       function createSliderAndLabel(divId, callback, min, max, val, step) {
         const slider = createSlider(min, max, val, step);
         slider.parent(divId);
@@ -323,8 +325,9 @@
       }
 
       function createUI() {
-        // Reset Cloth and Reset Orientation buttons
+        // Reset Cloth button
         select("#resetBtn").mousePressed(setupCloth);
+        // Reset Orientation button
         select("#resetOrientationBtn").mousePressed(() => { doResetOrientation = true; });
 
         // Pinning mode radio buttons
@@ -335,7 +338,7 @@
         pinRadio.parent("pinningRadio");
         pinRadio.changed(() => { pinningMode = pinRadio.value(); });
 
-        // For each parameter, attach a radio group ("off"/"on")
+        // Attach radio for each parameter
         attachParamRadio("dampingRadio", (on) => { dampingOn = on; }, "dampingContainer");
         attachParamRadio("iterationsRadio", (on) => { iterationsOn = on; }, "iterationsContainer");
         attachParamRadio("stretchRadio", (on) => { stretchOn = on; }, "stretchContainer");
@@ -349,50 +352,18 @@
         attachParamRadio("gravityRadio", (on) => { gravityOn = on; }, "gravityContainer");
         attachParamRadio("shadingRadio", (on) => { shadingOn = on; }, null);
 
-        // Create sliders for each parameter
-        createSliderAndLabel("dampingSlider", (val) => {
-          damping = val; select("#dampingVal").html(nf(val, 1, 2));
-        }, 0.90, 1.0, 0.98, 0.01);
-
-        createSliderAndLabel("iterationsSlider", (val) => {
-          iterations = val; select("#iterationsVal").html(val);
-        }, 1, 10, 5, 1);
-
-        createSliderAndLabel("stretchSlider", (val) => {
-          stretchFactor = val; select("#stretchVal").html(nf(val, 1, 2));
-        }, 0.8, 1.2, 1.0, 0.01);
-
-        createSliderAndLabel("shearSlider", (val) => {
-          shearFactor = val; select("#shearVal").html(nf(val, 1, 2));
-        }, 0.8, 1.2, 1.0, 0.01);
-
-        createSliderAndLabel("bendingSlider", (val) => {
-          bendingFactor = val; select("#bendingVal").html(nf(val, 1, 2));
-        }, 0.8, 1.2, 1.0, 0.01);
-
-        createSliderAndLabel("weightSlider", (val) => {
-          weight = val; select("#weightVal").html(nf(val, 1, 2));
-        }, 0.5, 2.0, 1.0, 0.1);
-
-        createSliderAndLabel("windXSlider", (val) => {
-          windX = val; select("#windXVal").html(nf(val, 1, 2));
-        }, -1, 1, 0.2, 0.01);
-
-        createSliderAndLabel("windYSlider", (val) => {
-          windY = val; select("#windYVal").html(nf(val, 1, 2));
-        }, -1, 1, 0, 0.01);
-
-        createSliderAndLabel("windZSlider", (val) => {
-          windZ = val; select("#windZVal").html(nf(val, 1, 2));
-        }, -1, 1, 0.1, 0.01);
-
-        createSliderAndLabel("windBufSlider", (val) => {
-          windBuffer = val; select("#windBufVal").html(nf(val, 1, 2));
-        }, 0, 2, 1.0, 0.01);
-
-        createSliderAndLabel("gravitySlider", (val) => {
-          gravity = val; select("#gravityVal").html(nf(val, 1, 2));
-        }, 0, 1, 0.4, 0.01);
+        // Create sliders
+        createSliderAndLabel("dampingSlider", (val) => { damping = val; select("#dampingVal").html(nf(val, 1, 2)); }, 0.90, 1.0, 0.98, 0.01);
+        createSliderAndLabel("iterationsSlider", (val) => { iterations = val; select("#iterationsVal").html(val); }, 1, 10, 5, 1);
+        createSliderAndLabel("stretchSlider", (val) => { stretchFactor = val; select("#stretchVal").html(nf(val, 1, 2)); }, 0.8, 1.2, 1.0, 0.01);
+        createSliderAndLabel("shearSlider", (val) => { shearFactor = val; select("#shearVal").html(nf(val, 1, 2)); }, 0.8, 1.2, 1.0, 0.01);
+        createSliderAndLabel("bendingSlider", (val) => { bendingFactor = val; select("#bendingVal").html(nf(val, 1, 2)); }, 0.8, 1.2, 1.0, 0.01);
+        createSliderAndLabel("weightSlider", (val) => { weight = val; select("#weightVal").html(nf(val, 1, 2)); }, 0.5, 2.0, 1.0, 0.1);
+        createSliderAndLabel("windXSlider", (val) => { windX = val; select("#windXVal").html(nf(val, 1, 2)); }, -1, 1, 0.2, 0.01);
+        createSliderAndLabel("windYSlider", (val) => { windY = val; select("#windYVal").html(nf(val, 1, 2)); }, -1, 1, 0, 0.01);
+        createSliderAndLabel("windZSlider", (val) => { windZ = val; select("#windZVal").html(nf(val, 1, 2)); }, -1, 1, 0.1, 0.01);
+        createSliderAndLabel("windBufSlider", (val) => { windBuffer = val; select("#windBufVal").html(nf(val, 1, 2)); }, 0, 2, 1.0, 0.01);
+        createSliderAndLabel("gravitySlider", (val) => { gravity = val; select("#gravityVal").html(nf(val, 1, 2)); }, 0, 1, 0.4, 0.01);
       }
 
       function setupCloth() {
@@ -419,10 +390,10 @@
             if (pinningMode === "top") {
               pinned = (y === 0);
             } else if (pinningMode === "corners") {
-              pinned = ((x===0 && y===0) ||
-                        (x===cols-1 && y===0) ||
-                        (x===0 && y===rows-1) ||
-                        (x===cols-1 && y===rows-1));
+              pinned = ((x === 0 && y === 0) ||
+                        (x === cols-1 && y === 0) ||
+                        (x === 0 && y === rows-1) ||
+                        (x === cols-1 && y === rows-1));
             }
             clothPoints.push({ x: px, y: py, z: pz, oldx: px, oldy: py, oldz: pz, pinned: pinned });
             grid[y][x] = clothPoints.length - 1;
@@ -432,7 +403,7 @@
         // 2. Horizontal midpoints
         for (let y = 0; y < rows; y++) {
           horizontal[y] = [];
-          for (let x = 0; x < cols-1; x++) {
+          for (let x = 0; x < cols - 1; x++) {
             let idxA = grid[y][x];
             let idxB = grid[y][x+1];
             let A = clothPoints[idxA];
@@ -446,7 +417,7 @@
         }
 
         // 3. Vertical midpoints
-        for (let y = 0; y < rows-1; y++) {
+        for (let y = 0; y < rows - 1; y++) {
           vertical[y] = [];
           for (let x = 0; x < cols; x++) {
             let idxA = grid[y][x];
@@ -462,9 +433,9 @@
         }
 
         // 4. Cell centers
-        for (let y = 0; y < rows-1; y++) {
+        for (let y = 0; y < rows - 1; y++) {
           centers[y] = [];
-          for (let x = 0; x < cols-1; x++) {
+          for (let x = 0; x < cols - 1; x++) {
             let idxA = grid[y][x];
             let idxB = grid[y][x+1];
             let idxC = grid[y+1][x];
@@ -481,14 +452,14 @@
           }
         }
 
-        // 5. Structural constraints
+        // 5. Structural constraints (Stretch)
         for (let y = 0; y < rows; y++) {
           for (let x = 0; x < cols; x++) {
             let idx = grid[y][x];
-            if (x < cols-1) {
+            if (x < cols - 1) {
               addConstraint(idx, grid[y][x+1], spacing * (stretchOn ? stretchFactor : BASE_STRETCH));
             }
-            if (y < rows-1) {
+            if (y < rows - 1) {
               addConstraint(idx, grid[y+1][x], spacing * (stretchOn ? stretchFactor : BASE_STRETCH));
             }
           }
@@ -496,13 +467,13 @@
 
         // 6. Bending constraints
         for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols-2; x++) {
+          for (let x = 0; x < cols - 2; x++) {
             let idx1 = grid[y][x];
             let idx2 = grid[y][x+2];
             addConstraint(idx1, idx2, spacing * 2 * (bendingOn ? bendingFactor : BASE_BENDING));
           }
         }
-        for (let y = 0; y < rows-2; y++) {
+        for (let y = 0; y < rows - 2; y++) {
           for (let x = 0; x < cols; x++) {
             let idx1 = grid[y][x];
             let idx2 = grid[y+2][x];
@@ -511,20 +482,20 @@
         }
 
         // 7. Shear constraints
-        for (let y = 0; y < rows-1; y++) {
-          for (let x = 0; x < cols-1; x++) {
+        for (let y = 0; y < rows - 1; y++) {
+          for (let x = 0; x < cols - 1; x++) {
             let idxA = grid[y][x];
             let idxB = grid[y][x+1];
             let idxC = grid[y+1][x];
             let idxD = grid[y+1][x+1];
-            addConstraint(idxA, idxD, sqrt(2)*spacing*(shearOn ? shearFactor : BASE_SHEAR));
-            addConstraint(idxB, idxC, sqrt(2)*spacing*(shearOn ? shearFactor : BASE_SHEAR));
+            addConstraint(idxA, idxD, sqrt(2) * spacing * (shearOn ? shearFactor : BASE_SHEAR));
+            addConstraint(idxB, idxC, sqrt(2) * spacing * (shearOn ? shearFactor : BASE_SHEAR));
           }
         }
 
-        // 8. Subdivide each cell into triangles (using baseline constraints)
-        for (let y = 0; y < rows-1; y++) {
-          for (let x = 0; x < cols-1; x++) {
+        // 8. Subdivide each cell into triangles (using same approach as before)
+        for (let y = 0; y < rows - 1; y++) {
+          for (let x = 0; x < cols - 1; x++) {
             let A = grid[y][x];
             let B = grid[y][x+1];
             let C = grid[y+1][x];
@@ -534,35 +505,35 @@
             let G = vertical[y][x];
             let H = vertical[y][x+1];
             let I = centers[y][x];
-
+      
             addConstraint(A, E, distBetween(A, E));
             addConstraint(E, I, distBetween(E, I));
             addConstraint(I, A, distBetween(I, A));
-
+      
             addConstraint(A, G, distBetween(A, G));
             addConstraint(G, I, distBetween(G, I));
             addConstraint(I, A, distBetween(I, A));
-
+      
             addConstraint(B, E, distBetween(B, E));
             addConstraint(E, I, distBetween(E, I));
             addConstraint(I, B, distBetween(I, B));
-
+      
             addConstraint(B, H, distBetween(B, H));
             addConstraint(H, I, distBetween(H, I));
             addConstraint(I, B, distBetween(I, B));
-
+      
             addConstraint(C, G, distBetween(C, G));
             addConstraint(G, I, distBetween(G, I));
             addConstraint(I, C, distBetween(I, C));
-
+      
             addConstraint(C, F, distBetween(C, F));
             addConstraint(F, I, distBetween(F, I));
             addConstraint(I, C, distBetween(I, C));
-
+      
             addConstraint(D, H, distBetween(D, H));
             addConstraint(H, I, distBetween(H, I));
             addConstraint(I, D, distBetween(I, D));
-
+      
             addConstraint(D, F, distBetween(D, F));
             addConstraint(F, I, distBetween(F, I));
             addConstraint(I, D, distBetween(I, D));
@@ -589,7 +560,6 @@
       }
 
       function updateCloth() {
-        // Use a sine oscillation for wind so the cloth keeps moving
         let freq = 0.01;
         for (let p of clothPoints) {
           if (!p.pinned) {
@@ -650,8 +620,8 @@
             let dy = p2.y - p1.y;
             let dz = p2.z - p1.z;
             let d = sqrt(dx*dx + dy*dy + dz*dz);
-            if (d < spacing * 0.5 && d > 0) {
-              let overlap = spacing * 0.5 - d;
+            if (d < spacing*0.5 && d > 0) {
+              let overlap = spacing*0.5 - d;
               let angle = atan2(dy, dx);
               if (!p1.pinned && !p2.pinned) {
                 p1.x -= cos(angle)*overlap*0.5;
@@ -670,10 +640,8 @@
         }
       }
 
-      // 3D Dragging: Use modelX/modelY to compute screen positions and select a point.
+      // 3D Dragging: Pick a point based on modelX/modelY
       function mousePressed() {
-        // Only if mouse is in canvas area (x > 0 because our canvas is WEBGL)
-        // Use a threshold of, say, 10 pixels
         let closest = null;
         let closestDist = 10;
         for (let i = 0; i < clothPoints.length; i++) {
@@ -688,16 +656,13 @@
         }
         if (closest !== null) {
           dragPointIndex = closest;
-          // store the z-plane of this point
           dragPlaneZ = clothPoints[closest].z;
         }
       }
 
-      // Simple unproject function assuming default camera
+      // Simple unproject function (assuming default camera)
       function unproject(mx, my, fixedZ) {
-        // Default camera parameters: eye at (0,0,d), where d = (height/2)/tan(PI*30/180)
         let d = (height/2) / tan(PI*30/180);
-        // In WEBGL, the origin is at the center.
         let nx = mx - width/2;
         let ny = my - height/2;
         let factor = (d + fixedZ) / d;
@@ -708,13 +673,10 @@
 
       function mouseDragged() {
         if (dragPointIndex !== null) {
-          // For simplicity, assume camera is in default orientation (reset it first for best results)
           let newPos = unproject(mouseX, mouseY, dragPlaneZ);
-          // Update the selected point to new world coordinates.
           let p = clothPoints[dragPointIndex];
           p.x = newPos.x;
           p.y = newPos.y;
-          // We also update oldx, oldy so it doesn't jerk.
           p.oldx = newPos.x;
           p.oldy = newPos.y;
         }
@@ -766,7 +728,7 @@
           }
         }
       
-        // Wireframe constraints
+        // Draw wireframe constraints
         stroke(255);
         strokeWeight(2);
         for (let c of clothConstraints) {
@@ -775,7 +737,7 @@
           line(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
         }
       
-        // Draw cloth points
+        // Draw cloth points as spheres
         noStroke();
         fill(255, 0, 0);
         for (let p of clothPoints) {
@@ -785,11 +747,10 @@
           pop();
         }
       }
-
+      
       function windowResized() {
         resizeCanvas(windowWidth - 280, windowHeight);
       }
     </script>
   </body>
 </html>
-
