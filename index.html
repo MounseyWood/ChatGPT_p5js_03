@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>3D Cloth Simulation – Plane & Draped Modes</title>
-    <!-- Load p5.js library -->
+    <title>3D Cloth Simulation – Plane & Draped + Floor + Play/Pause</title>
+    <!-- p5.js library -->
     <script src="https://cdn.jsdelivr.net/npm/p5@1.5.0/lib/p5.min.js"></script>
     <style>
       /* Global Layout & Colors */
@@ -105,7 +105,7 @@
       <p>
         This demo has two simulation modes:
         <br>• <strong>Plane</strong>: A pinned cloth swatch.
-        <br>• <strong>Draped</strong>: A cloth placed above a sphere, so it falls and drapes over it.
+        <br>• <strong>Draped</strong>: A cloth placed horizontally over a sphere, collides with sphere & floor.
       </p>
 
       <!-- Simulation Mode -->
@@ -114,7 +114,7 @@
         <div id="simModeRadio"></div>
         <div class="paramDesc">
           <strong>Plane</strong> = pinned cloth in free space.<br>
-          <strong>Draped</strong> = cloth starts above a sphere and collides with it.
+          <strong>Draped</strong> = cloth starts horizontal above sphere & floor.
         </div>
       </div>
 
@@ -123,8 +123,8 @@
         <div class="paramHeader">Interaction Mode:</div>
         <div id="interactionRadioGroup"></div>
         <div class="paramDesc">
-          Select "Rotate" to move the camera; "Drag" to pick individual points.
-          (For best dragging results, click "Reset Orientation" first.)
+          "Rotate" to move the camera; "Drag" to pick cloth points.
+          (Use "Reset Orientation" first for best dragging.)
         </div>
       </div>
 
@@ -133,8 +133,7 @@
         <div class="paramHeader">Pinning Mode:</div>
         <div id="pinningRadio"></div>
         <div class="paramDesc">
-          Choose whether the cloth is pinned along the top edge or at its four corners.
-          (Only relevant if in "Plane" mode.)
+          Only relevant if in "Plane" mode.
         </div>
       </div>
 
@@ -184,7 +183,7 @@
         <div class="paramRadio" id="bendingRadioGroup"></div>
         <div id="bendingContainer" class="paramContainer">
           <div id="bendingSlider"></div>
-          <div class="paramDesc">Controls resistance to sharp folds (Off = 1.0).</div>
+          <div class="paramDesc">Resistance to sharp folds (Off = 1.0).</div>
         </div>
       </div>
 
@@ -194,7 +193,7 @@
         <div class="paramRadio" id="weightRadioGroup"></div>
         <div id="weightContainer" class="paramContainer">
           <div id="weightSlider"></div>
-          <div class="paramDesc">Modifies downward pull (Off = 1.0).</div>
+          <div class="paramDesc">Downward pull (Off = 1.0).</div>
         </div>
       </div>
 
@@ -224,7 +223,7 @@
         <div class="paramRadio" id="windZRadioGroup"></div>
         <div id="windZContainer" class="paramContainer">
           <div id="windZSlider"></div>
-          <div class="paramDesc">Wind force along the Z-axis (Off = 0).</div>
+          <div class="paramDesc">Wind force along Z (Off = 0).</div>
         </div>
       </div>
 
@@ -244,7 +243,7 @@
         <div class="paramRadio" id="gravityRadioGroup"></div>
         <div id="gravityContainer" class="paramContainer">
           <div id="gravitySlider"></div>
-          <div class="paramDesc">Sets downward acceleration (Off = 0).</div>
+          <div class="paramDesc">Downward acceleration (Off = 0).</div>
         </div>
       </div>
 
@@ -252,10 +251,12 @@
       <div class="parameter">
         <div class="paramHeader">Shading Mode:</div>
         <div class="paramRadio" id="shadingRadioGroup"></div>
-        <div class="paramDesc">Fills each cell with a gray-scale color based on vertical position.</div>
+        <div class="paramDesc">Gray-scale fill based on vertical position.</div>
       </div>
 
       <div class="bottomButtons">
+        <!-- NEW: Play/Pause Simulation button -->
+        <button id="playPauseBtn">Pause Simulation</button>
         <button id="resetOrientationBtn">Reset Orientation</button>
         <button id="resetBtn">Reset Cloth</button>
       </div>
@@ -272,6 +273,9 @@
       /* SPHERE for "draped" mode */
       let sphereCenter = { x: 0, y: 0, z: 0 };
       let sphereRadius = 100;
+
+      /* A simple invisible floor in "draped" mode */
+      let floorY = 150; // cloth can't go below y=150
 
       /* SIMULATION PARAMETERS (default) */
       let damping = 0.98;
@@ -322,6 +326,9 @@
       /* ORIENTATION RESET FLAG */
       let doResetOrientation = false;
 
+      /* PLAY/PAUSE */
+      let simulationRunning = true;
+
       /* 3D DRAGGING VARIABLES */
       let dragPointIndex = null;
       let dragPlaneZ = 0;
@@ -338,6 +345,13 @@
         // "Reset Cloth" & "Reset Orientation"
         select("#resetBtn").mousePressed(setupCloth);
         select("#resetOrientationBtn").mousePressed(() => { doResetOrientation = true; });
+
+        // NEW: Play/Pause button
+        const playPauseBtn = select("#playPauseBtn");
+        playPauseBtn.mousePressed(() => {
+          simulationRunning = !simulationRunning;
+          playPauseBtn.html(simulationRunning ? "Pause Simulation" : "Play Simulation");
+        });
 
         // Simulation Mode radio
         let simModeRadio = createRadio();
@@ -371,7 +385,7 @@
         pinRadio.parent("pinningRadio");
         pinRadio.changed(() => {
           pinningMode = pinRadio.value();
-          if (simulationMode === "plane") setupCloth(); // only relevant if plane mode
+          if (simulationMode === "plane") setupCloth();
         });
 
         // Helper to attach param toggles
@@ -461,7 +475,6 @@
         }, 0, 1, 0.4, 0.01);
       }
 
-      /* Setup cloth based on simulationMode ("plane" or "draped") */
       function setupCloth() {
         clothPoints = [];
         clothConstraints = [];
@@ -474,25 +487,30 @@
         let clothHeight = (rows - 1) * spacing;
 
         if (simulationMode === "plane") {
-          // Original plane mode
+          // Original plane mode, pinned
           let startX = -clothWidth/2 + clothShiftX;
           let startY = -clothHeight/2;
-          createClothPoints(startX, startY, 0, clothWidth, clothHeight, simulationMode);
+          createClothPoints_Plane(startX, startY, 0);
         } else {
-          // Draped mode
+          // Draped mode: cloth is horizontal, i.e. in the XZ plane
+          // The sphere is at (0,0,0) with radius=100
+          // We'll place the cloth so Y is some negative value (above the sphere),
+          // and the cloth extends in XZ.
           sphereCenter = { x: 0, y: 0, z: 0 };
           sphereRadius = 100;
-          // Place cloth horizontally above the sphere
-          let startX = -clothWidth/2;
-          let startY = -(sphereRadius + 50); 
-          createClothPoints(startX, startY, 0, clothWidth, clothHeight, simulationMode);
+
+          // We want the cloth's center over the sphere, so y = - (radius+some offset).
+          // We'll define the cloth in XZ plane, with y fixed for all points initially.
+          // For a 20x20 cloth, we'll do: x from -clothWidth/2 to +clothWidth/2,
+          // z from -clothHeight/2 to +clothHeight/2
+          let startY = -(sphereRadius + 50); // 50 above the sphere top
+          createClothPoints_Draped(-clothWidth/2, startY, -clothHeight/2);
         }
 
         createSubPointsAndConstraints();
       }
 
-      function createClothPoints(startX, startY, startZ, clothWidth, clothHeight, mode) {
-        // Create the main grid corner points
+      function createClothPoints_Plane(startX, startY, startZ) {
         for (let y = 0; y < rows; y++) {
           grid[y] = [];
           for (let x = 0; x < cols; x++) {
@@ -500,27 +518,42 @@
             let py = startY + y * spacing;
             let pz = startZ;
             let pinned = false;
-            if (mode === "plane") {
-              // Pin top row or corners based on pinningMode
-              if (pinningMode === "top") {
-                pinned = (y === 0);
-              } else if (pinningMode === "corners") {
-                pinned = ((x === 0 && y === 0) ||
-                          (x === cols-1 && y === 0) ||
-                          (x === 0 && y === rows-1) ||
-                          (x === cols-1 && y === rows-1));
-              }
-            } else {
-              // "draped" mode: no pins
-              pinned = false;
+            // Pin top row or corners
+            if (pinningMode === "top") {
+              pinned = (y === 0);
+            } else if (pinningMode === "corners") {
+              pinned = ((x===0 && y===0) ||
+                        (x===cols-1 && y===0) ||
+                        (x===0 && y===rows-1) ||
+                        (x===cols-1 && y===rows-1));
             }
-
             clothPoints.push({
               x: px, y: py, z: pz,
               oldx: px, oldy: py, oldz: pz,
               pinned: pinned
             });
             grid[y][x] = clothPoints.length - 1;
+          }
+        }
+      }
+
+      function createClothPoints_Draped(startX, fixedY, startZ) {
+        // The cloth is oriented in the XZ plane, so for each row (z index) and col (x index),
+        // we vary X and Z, while Y is fixed at "fixedY".
+        for (let rz = 0; rz < rows; rz++) {
+          grid[rz] = [];
+          for (let cx = 0; cx < cols; cx++) {
+            let px = startX + cx * spacing;   // X changes horizontally
+            let py = fixedY;                  // Y is the same for all points initially
+            let pz = startZ + rz * spacing;   // Z changes "down" the cloth
+            // In draped mode, no pins
+            let pinned = false;
+            clothPoints.push({
+              x: px, y: py, z: pz,
+              oldx: px, oldy: py, oldz: pz,
+              pinned: pinned
+            });
+            grid[rz][cx] = clothPoints.length - 1;
           }
         }
       }
@@ -713,7 +746,9 @@
           orbitControl();
         }
 
-        updateCloth();
+        if (simulationRunning) {
+          updateCloth();
+        }
 
         // If "draped" mode, draw the sphere
         if (simulationMode === "draped") {
@@ -764,7 +799,6 @@
           line(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
         }
 
-        // Draw cloth points as red (#FF0000) spheres
         noStroke();
         fill("#FF0000");
         for (let p of clothPoints) {
@@ -834,9 +868,10 @@
 
         doSelfCollision();
 
-        // If "draped" mode, do sphere collision
+        // If "draped" mode, do sphere + floor collisions
         if (simulationMode === "draped") {
           doSphereCollision();
+          doFloorCollision();
         }
       }
 
@@ -870,7 +905,6 @@
         }
       }
 
-      /* Sphere collision for "draped" mode */
       function doSphereCollision() {
         for (let p of clothPoints) {
           if (!p.pinned) {
@@ -891,7 +925,16 @@
         }
       }
 
-      /* 3D Dragging */
+      /* Invisible floor collision at y=floorY */
+      function doFloorCollision() {
+        for (let p of clothPoints) {
+          if (!p.pinned && p.y > floorY) {
+            p.y = floorY;
+          }
+        }
+      }
+
+      /* 3D DRAGGING */
       function mousePressed() {
         if (interactionMode === "drag") {
           let closest = null;
