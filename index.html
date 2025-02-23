@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>3D Cloth Simulation – Plane & Draped Modes with Friction</title>
+    <title>3D Cloth Simulation – Plane & Draped Modes with Central Pin</title>
     <!-- Load p5.js library -->
     <script src="https://cdn.jsdelivr.net/npm/p5@1.5.0/lib/p5.min.js"></script>
     <style>
@@ -43,7 +43,6 @@
         line-height: 1.4em;
         margin-bottom: 8px;
       }
-
       /* Parameter containers */
       .parameter {
         margin-bottom: 12px;
@@ -68,7 +67,7 @@
       }
       .paramContainer {
         margin-top: 4px;
-        display: none;
+        display: none; /* Hidden until "on" is selected */
       }
       .paramDesc {
         font-size: 12px;
@@ -102,7 +101,7 @@
       <p>
         This demo has two simulation modes:
         <br>• <strong>Plane</strong>: A pinned cloth swatch.
-        <br>• <strong>Draped</strong>: A cloth that starts horizontal over a sphere and a floor.
+        <br>• <strong>Draped</strong>: A cloth that starts nearly touching a sphere and a floor.
       </p>
 
       <!-- Simulation Mode -->
@@ -111,7 +110,7 @@
         <div id="simModeRadio"></div>
         <div class="paramDesc">
           <strong>Plane</strong>: pinned cloth in free space.
-          <br><strong>Draped</strong>: cloth starts nearly touching a sphere and drapes over it; an invisible floor stops it from falling away.
+          <br><strong>Draped</strong>: cloth starts nearly touching the sphere and drapes over it.
         </div>
       </div>
 
@@ -120,8 +119,8 @@
         <div class="paramHeader">Interaction Mode:</div>
         <div id="interactionRadioGroup"></div>
         <div class="paramDesc">
-          "Rotate" moves the camera; "Drag" lets you pick individual cloth points.
-          (For best results in Drag mode, click "Reset Orientation" first.)
+          "Rotate" to move the camera; "Drag" to pick individual cloth points.
+          (For best results, click "Reset Orientation" first.)
         </div>
       </div>
 
@@ -129,9 +128,7 @@
       <div class="parameter">
         <div class="paramHeader">Pinning Mode:</div>
         <div id="pinningRadio"></div>
-        <div class="paramDesc">
-          Choose whether the cloth is pinned along the top edge or at its four corners.
-        </div>
+        <div class="paramDesc">Only relevant in Plane mode.</div>
       </div>
 
       <!-- Damping -->
@@ -252,7 +249,6 @@
       </div>
 
       <div class="bottomButtons">
-        <!-- Play/Pause Simulation button -->
         <button id="playPauseBtn">Pause Simulation</button>
         <button id="resetOrientationBtn">Reset Orientation</button>
         <button id="resetBtn">Reset Cloth</button>
@@ -272,7 +268,7 @@
       let sphereRadius = 100;
 
       /* Invisible floor for Draped mode */
-      let floorY = 150; // cloth cannot go below y=150
+      let floorY = 150; // cloth cannot go below y = 150
 
       /* SIMULATION PARAMETERS (default) */
       let damping = 0.98;
@@ -321,7 +317,7 @@
       /* ORIENTATION RESET FLAG */
       let doResetOrientation = false;
 
-      /* PLAY/PAUSE */
+      /* PLAY/PAUSE FLAG */
       let simulationRunning = true;
 
       /* 3D DRAGGING VARIABLES */
@@ -371,7 +367,7 @@
           interactionMode = interactionRadio.value();
         });
 
-        // Pinning Mode radio (only used in plane mode)
+        // Pinning Mode radio (for Plane mode)
         let pinRadio = createRadio();
         pinRadio.option("top", "Top Pinned");
         pinRadio.option("corners", "Corner Pinned");
@@ -383,7 +379,7 @@
           if (simulationMode === "plane") setupCloth();
         });
 
-        // Helper: Attach radio group for a parameter with "off"/"on"
+        // Helper to attach param toggles
         function attachParamRadio(parentId, setFlag, containerId) {
           let r = createRadio();
           r.option("off", "Off");
@@ -416,7 +412,7 @@
         attachParamRadio("gravityRadioGroup", (on) => { gravityOn = on; }, "gravityContainer");
         attachParamRadio("shadingRadioGroup", (on) => { shadingOn = on; }, null);
 
-        // Helper: Create a slider
+        // Helper: Create slider
         function createSliderAndLabel(divId, callback, min, max, val, step) {
           const slider = createSlider(min, max, val, step);
           slider.parent(divId);
@@ -424,21 +420,53 @@
           callback(slider.value());
         }
 
-        // Sliders for each parameter
-        createSliderAndLabel("dampingSlider", (val) => { damping = val; select("#dampingVal").html(nf(val, 1, 2)); }, 0.90, 1.0, 0.98, 0.01);
-        createSliderAndLabel("iterationsSlider", (val) => { iterations = val; select("#iterationsVal").html(val); }, 1, 10, 5, 1);
-        createSliderAndLabel("stretchSlider", (val) => { stretchFactor = val; select("#stretchVal").html(nf(val, 1, 2)); }, 0.8, 1.2, 1.0, 0.01);
-        createSliderAndLabel("shearSlider", (val) => { shearFactor = val; select("#shearVal").html(nf(val, 1, 2)); }, 0.8, 1.2, 1.0, 0.01);
-        createSliderAndLabel("bendingSlider", (val) => { bendingFactor = val; select("#bendingVal").html(nf(val, 1, 2)); }, 0.8, 1.2, 1.0, 0.01);
-        createSliderAndLabel("weightSlider", (val) => { weight = val; select("#weightVal").html(nf(val, 1, 2)); }, 0.5, 2.0, 1.0, 0.1);
-        createSliderAndLabel("windXSlider", (val) => { windX = val; select("#windXVal").html(nf(val, 1, 2)); }, -1, 1, 0.2, 0.01);
-        createSliderAndLabel("windYSlider", (val) => { windY = val; select("#windYVal").html(nf(val, 1, 2)); }, -1, 1, 0, 0.01);
-        createSliderAndLabel("windZSlider", (val) => { windZ = val; select("#windZVal").html(nf(val, 1, 2)); }, -1, 1, 0.1, 0.01);
-        createSliderAndLabel("windBufSlider", (val) => { windBuffer = val; select("#windBufVal").html(nf(val, 1, 2)); }, 0, 2, 1.0, 0.01);
-        createSliderAndLabel("gravitySlider", (val) => { gravity = val; select("#gravityVal").html(nf(val, 1, 2)); }, 0, 1, 0.4, 0.01);
+        // Create sliders for each parameter
+        createSliderAndLabel("dampingSlider", (val) => {
+          damping = val; select("#dampingVal").html(nf(val, 1, 2));
+        }, 0.90, 1.0, 0.98, 0.01);
+
+        createSliderAndLabel("iterationsSlider", (val) => {
+          iterations = val; select("#iterationsVal").html(val);
+        }, 1, 10, 5, 1);
+
+        createSliderAndLabel("stretchSlider", (val) => {
+          stretchFactor = val; select("#stretchVal").html(nf(val, 1, 2));
+        }, 0.8, 1.2, 1.0, 0.01);
+
+        createSliderAndLabel("shearSlider", (val) => {
+          shearFactor = val; select("#shearVal").html(nf(val, 1, 2));
+        }, 0.8, 1.2, 1.0, 0.01);
+
+        createSliderAndLabel("bendingSlider", (val) => {
+          bendingFactor = val; select("#bendingVal").html(nf(val, 1, 2));
+        }, 0.8, 1.2, 1.0, 0.01);
+
+        createSliderAndLabel("weightSlider", (val) => {
+          weight = val; select("#weightVal").html(nf(val, 1, 2));
+        }, 0.5, 2.0, 1.0, 0.1);
+
+        createSliderAndLabel("windXSlider", (val) => {
+          windX = val; select("#windXVal").html(nf(val, 1, 2));
+        }, -1, 1, 0.2, 0.01);
+
+        createSliderAndLabel("windYSlider", (val) => {
+          windY = val; select("#windYVal").html(nf(val, 1, 2));
+        }, -1, 1, 0, 0.01);
+
+        createSliderAndLabel("windZSlider", (val) => {
+          windZ = val; select("#windZVal").html(nf(val, 1, 2));
+        }, -1, 1, 0.1, 0.01);
+
+        createSliderAndLabel("windBufSlider", (val) => {
+          windBuffer = val; select("#windBufVal").html(nf(val, 1, 2));
+        }, 0, 2, 1.0, 0.01);
+
+        createSliderAndLabel("gravitySlider", (val) => {
+          gravity = val; select("#gravityVal").html(nf(val, 1, 2));
+        }, 0, 1, 0.4, 0.01);
       }
 
-      /* Setup cloth based on simulationMode */
+      /* Setup cloth based on simulation mode */
       function setupCloth() {
         clothPoints = [];
         clothConstraints = [];
@@ -451,19 +479,30 @@
         let clothHeight = (rows - 1) * spacing;
 
         if (simulationMode === "plane") {
-          // Plane mode: use original orientation
+          // Plane mode: original orientation
           let startX = -clothWidth/2 + clothShiftX;
           let startY = -clothHeight/2;
           createClothPoints_Plane(startX, startY, 0);
         } else {
-          // Draped mode: cloth in XZ plane, horizontal, very close to the sphere
+          // Draped mode: cloth is in XZ plane, with fixed Y.
           sphereCenter = { x: 0, y: 0, z: 0 };
           sphereRadius = 100;
-          // Place the cloth so its center is nearly touching the sphere; here we set fixed Y just slightly above the sphere
-          let startY = -(sphereRadius + 10); // only 10 units above sphere top
+          // Place cloth so it nearly touches the sphere: only 10 units above the sphere's top.
+          let startY = -(sphereRadius + 10);
           createClothPoints_Draped(-clothWidth/2, startY, -clothHeight/2);
+          // Additionally, pin the central cloth point to the sphere's pole.
+          let midRow = Math.floor(rows/2);
+          let midCol = Math.floor(cols/2);
+          let centerIdx = grid[midRow][midCol];
+          clothPoints[centerIdx].pinned = true;
+          // Set its position to be exactly at the sphere's top (pole).
+          clothPoints[centerIdx].x = sphereCenter.x;
+          clothPoints[centerIdx].y = sphereCenter.y - sphereRadius;
+          clothPoints[centerIdx].z = sphereCenter.z;
+          clothPoints[centerIdx].oldx = sphereCenter.x;
+          clothPoints[centerIdx].oldy = sphereCenter.y - sphereRadius;
+          clothPoints[centerIdx].oldz = sphereCenter.z;
         }
-
         createSubPointsAndConstraints();
       }
 
@@ -494,12 +533,12 @@
       }
 
       function createClothPoints_Draped(startX, fixedY, startZ) {
-        // Create cloth points in the XZ plane with fixed Y (horizontal cloth)
+        // Cloth is created in the XZ plane with fixed Y.
         for (let rz = 0; rz < rows; rz++) {
           grid[rz] = [];
           for (let cx = 0; cx < cols; cx++) {
             let px = startX + cx * spacing;
-            let py = fixedY; // fixed Y
+            let py = fixedY; // fixed Y value
             let pz = startZ + rz * spacing;
             clothPoints.push({
               x: px, y: py, z: pz,
@@ -704,7 +743,7 @@
             let effGrav = gravityOn ? gravity : BASE_GRAVITY;
             let effWeight = weightOn ? weight : BASE_WEIGHT;
             p.x += vx + effectiveWindX;
-            p.y += vy + effGrav * effWeight + effectiveWindY;
+            p.y += vy + effGrav*effWeight + effectiveWindY;
             p.z += vz + effectiveWindZ;
           }
         }
@@ -737,7 +776,6 @@
 
         doSelfCollision();
 
-        // For Draped mode, apply sphere and floor collisions
         if (simulationMode === "draped") {
           doSphereCollision();
           doFloorCollision();
@@ -758,16 +796,16 @@
               let overlap = threshold - d;
               let angle = atan2(dy, dx);
               if (!p1.pinned && !p2.pinned) {
-                p1.x -= cos(angle) * overlap * 0.5;
-                p1.y -= sin(angle) * overlap * 0.5;
-                p2.x += cos(angle) * overlap * 0.5;
-                p2.y += sin(angle) * overlap * 0.5;
+                p1.x -= cos(angle)*overlap*0.5;
+                p1.y -= sin(angle)*overlap*0.5;
+                p2.x += cos(angle)*overlap*0.5;
+                p2.y += sin(angle)*overlap*0.5;
               } else if (!p1.pinned && p2.pinned) {
-                p1.x -= cos(angle) * overlap;
-                p1.y -= sin(angle) * overlap;
+                p1.x -= cos(angle)*overlap;
+                p1.y -= sin(angle)*overlap;
               } else if (p1.pinned && !p2.pinned) {
-                p2.x += cos(angle) * overlap;
-                p2.y += sin(angle) * overlap;
+                p2.x += cos(angle)*overlap;
+                p2.y += sin(angle)*overlap;
               }
             }
           }
@@ -775,7 +813,6 @@
       }
 
       function doSphereCollision() {
-        // Friction factor for collisions (reduces rebound)
         const collisionFriction = 0.5;
         for (let p of clothPoints) {
           if (!p.pinned) {
@@ -791,7 +828,7 @@
               p.x += nx * overlap;
               p.y += ny * overlap;
               p.z += nz * overlap;
-              // Apply friction: reduce "velocity" (difference between current and old)
+              // Apply friction to reduce rebound
               p.oldx = p.x - collisionFriction * (p.x - p.oldx);
               p.oldy = p.y - collisionFriction * (p.y - p.oldy);
               p.oldz = p.z - collisionFriction * (p.z - p.oldz);
@@ -801,7 +838,6 @@
       }
 
       function doFloorCollision() {
-        // When cloth points fall below floorY, clamp them and apply friction
         const collisionFriction = 0.5;
         for (let p of clothPoints) {
           if (!p.pinned && p.y > floorY) {
@@ -876,7 +912,7 @@
           updateCloth();
         }
 
-        // In Draped mode, draw the sphere and an invisible floor
+        // In Draped mode, draw sphere and invisible floor
         if (simulationMode === "draped") {
           noStroke();
           fill(80);
@@ -885,13 +921,9 @@
           sphere(sphereRadius);
           pop();
 
-          // Draw floor (invisible - same as background)
           push();
           translate(0, floorY, 0);
-          // Optional: Uncomment the next line to visualize the floor
-          // fill(30);
-          // Otherwise, we simply don't draw it.
-          noFill();
+          noFill(); // floor is invisible; uncomment fill(30) to visualize
           plane(1000, 1000);
           pop();
         }
