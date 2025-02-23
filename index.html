@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>3D Cloth Simulation – Radio Toggle & 3D Dragging</title>
+    <title>3D Cloth Simulation – Interaction Mode & 3D Dragging</title>
     <!-- Load p5.js -->
     <script src="https://cdn.jsdelivr.net/npm/p5@1.5.0/lib/p5.min.js"></script>
     <style>
@@ -60,6 +60,10 @@
         gap: 8px;
         margin-bottom: 4px;
       }
+      /* Use accent-color (supported in many modern browsers) to style radio buttons blue */
+      .paramRadio input[type="radio"] {
+        accent-color: blue;
+      }
       .paramContainer {
         margin-top: 4px;
         display: none; /* hidden by default until "on" is selected */
@@ -94,9 +98,16 @@
     <div id="uiPanel">
       <h2>3D Cloth Simulation</h2>
       <p>
-        Click on the cloth (in the canvas) to drag points in 3D (drag works on a fixed Z‐plane).
-        Use the radio buttons below to toggle parameters On/Off.
+        Use the controls below to toggle parameters on or off.
+        Also, choose your Interaction Mode:
       </p>
+
+      <!-- Interaction Mode -->
+      <div class="parameter">
+        <div class="paramHeader">Interaction Mode:</div>
+        <div id="interactionRadioGroup"></div>
+        <div class="paramDesc">Select "Rotate" to move the camera; "Drag" to pick individual points.</div>
+      </div>
 
       <!-- Pinning Mode -->
       <div class="parameter">
@@ -111,7 +122,7 @@
         <div class="paramRadio" id="dampingRadioGroup"></div>
         <div id="dampingContainer" class="paramContainer">
           <div id="dampingSlider"></div>
-          <div class="paramDesc">Controls energy loss. (Off = 1.0)</div>
+          <div class="paramDesc">Controls energy loss (Off = 1.0).</div>
         </div>
       </div>
 
@@ -121,7 +132,7 @@
         <div class="paramRadio" id="iterationsRadioGroup"></div>
         <div id="iterationsContainer" class="paramContainer">
           <div id="iterationsSlider"></div>
-          <div class="paramDesc">Constraint relaxations per frame. (Off = 1)</div>
+          <div class="paramDesc">Constraint relaxations per frame (Off = 1).</div>
         </div>
       </div>
 
@@ -131,7 +142,7 @@
         <div class="paramRadio" id="stretchRadioGroup"></div>
         <div id="stretchContainer" class="paramContainer">
           <div id="stretchSlider"></div>
-          <div class="paramDesc">Affects how much the cloth can extend. (Off = 1.0)</div>
+          <div class="paramDesc">Affects cloth extension (Off = 1.0).</div>
         </div>
       </div>
 
@@ -141,7 +152,7 @@
         <div class="paramRadio" id="shearRadioGroup"></div>
         <div id="shearContainer" class="paramContainer">
           <div id="shearSlider"></div>
-          <div class="paramDesc">Resists diagonal distortion. (Off = 1.0)</div>
+          <div class="paramDesc">Resists diagonal distortion (Off = 1.0).</div>
         </div>
       </div>
 
@@ -151,7 +162,7 @@
         <div class="paramRadio" id="bendingRadioGroup"></div>
         <div id="bendingContainer" class="paramContainer">
           <div id="bendingSlider"></div>
-          <div class="paramDesc">Controls resistance to sharp folds. (Off = 1.0)</div>
+          <div class="paramDesc">Controls resistance to sharp folds (Off = 1.0).</div>
         </div>
       </div>
 
@@ -161,7 +172,7 @@
         <div class="paramRadio" id="weightRadioGroup"></div>
         <div id="weightContainer" class="paramContainer">
           <div id="weightSlider"></div>
-          <div class="paramDesc">Modifies the downward pull. (Off = 1.0)</div>
+          <div class="paramDesc">Modifies downward pull (Off = 1.0).</div>
         </div>
       </div>
 
@@ -171,7 +182,7 @@
         <div class="paramRadio" id="windXRadioGroup"></div>
         <div id="windXContainer" class="paramContainer">
           <div id="windXSlider"></div>
-          <div class="paramDesc">Wind force along the X-axis. (Off = 0)</div>
+          <div class="paramDesc">Wind force along X (Off = 0).</div>
         </div>
       </div>
 
@@ -181,7 +192,7 @@
         <div class="paramRadio" id="windYRadioGroup"></div>
         <div id="windYContainer" class="paramContainer">
           <div id="windYSlider"></div>
-          <div class="paramDesc">Wind force along the Y-axis. (Off = 0)</div>
+          <div class="paramDesc">Wind force along Y (Off = 0).</div>
         </div>
       </div>
 
@@ -191,7 +202,7 @@
         <div class="paramRadio" id="windZRadioGroup"></div>
         <div id="windZContainer" class="paramContainer">
           <div id="windZSlider"></div>
-          <div class="paramDesc">Wind force along the Z-axis. (Off = 0)</div>
+          <div class="paramDesc">Wind force along Z (Off = 0).</div>
         </div>
       </div>
 
@@ -201,7 +212,7 @@
         <div class="paramRadio" id="windBufRadioGroup"></div>
         <div id="windBufContainer" class="paramContainer">
           <div id="windBufSlider"></div>
-          <div class="paramDesc">Scales overall wind oscillation amplitude. (Off = 1.0)</div>
+          <div class="paramDesc">Scales overall wind amplitude (Off = 1.0).</div>
         </div>
       </div>
 
@@ -211,7 +222,7 @@
         <div class="paramRadio" id="gravityRadioGroup"></div>
         <div id="gravityContainer" class="paramContainer">
           <div id="gravitySlider"></div>
-          <div class="paramDesc">Sets the downward acceleration. (Off = 0)</div>
+          <div class="paramDesc">Sets downward acceleration (Off = 0).</div>
         </div>
       </div>
 
@@ -275,6 +286,9 @@
       // Pinning mode (radio: "top" or "corners")
       let pinningMode = "top";
 
+      // Interaction mode: "rotate" or "drag"
+      let interactionMode = "rotate";
+
       // Horizontal shift for cloth position
       let clothShiftX = -40;
 
@@ -294,12 +308,11 @@
       }
 
       // Helper: Create a radio group for a parameter with options "off" and "on"
-      // The group name is set uniquely using the parentId.
       function attachParamRadio(parentId, setFlag, containerId) {
         let r = createRadio();
         r.option("off", "Off");
         r.option("on", "On");
-        r.elt.name = parentId + "_radio"; // unique name for each group
+        r.elt.name = parentId + "_radio"; // unique group name
         r.parent(parentId);
         r.selected("off"); // default off
         r.changed(() => {
@@ -329,15 +342,25 @@
         select("#resetBtn").mousePressed(setupCloth);
         select("#resetOrientationBtn").mousePressed(() => { doResetOrientation = true; });
 
+        // Interaction Mode radio group
+        let interactionRadio = createRadio();
+        interactionRadio.option("rotate", "Rotate");
+        interactionRadio.option("drag", "Drag");
+        interactionRadio.selected("rotate");
+        interactionRadio.elt.name = "interaction_radio";
+        interactionRadio.parent("uiPanel");
+        interactionRadio.changed(() => { interactionMode = interactionRadio.value(); });
+
         // Pinning mode radio buttons
         let pinRadio = createRadio();
         pinRadio.option("top", "Top Pinned");
         pinRadio.option("corners", "Corner Pinned");
         pinRadio.selected("top");
+        pinRadio.elt.name = "pinning_radio";
         pinRadio.parent("pinningRadio");
         pinRadio.changed(() => { pinningMode = pinRadio.value(); });
 
-        // Attach radio groups for each parameter, using unique parent IDs.
+        // Attach radio groups for each parameter
         attachParamRadio("dampingRadioGroup", (on) => { dampingOn = on; }, "dampingContainer");
         attachParamRadio("iterationsRadioGroup", (on) => { iterationsOn = on; }, "iterationsContainer");
         attachParamRadio("stretchRadioGroup", (on) => { stretchOn = on; }, "stretchContainer");
@@ -464,7 +487,7 @@
           }
         }
 
-        // 6. Bending constraints (two apart)
+        // 6. Bending constraints
         for (let y = 0; y < rows; y++) {
           for (let x = 0; x < cols-2; x++) {
             let idx1 = grid[y][x];
@@ -492,7 +515,7 @@
           }
         }
 
-        // 8. Subdivide each cell into triangles (same as before)
+        // 8. Subdivide each cell into triangles (as before)
         for (let y = 0; y < rows-1; y++) {
           for (let x = 0; x < cols-1; x++) {
             let A = grid[y][x];
@@ -623,39 +646,41 @@
               let overlap = spacing * 0.5 - d;
               let angle = atan2(dy, dx);
               if (!p1.pinned && !p2.pinned) {
-                p1.x -= cos(angle) * overlap * 0.5;
-                p1.y -= sin(angle) * overlap * 0.5;
-                p2.x += cos(angle) * overlap * 0.5;
-                p2.y += sin(angle) * overlap * 0.5;
+                p1.x -= cos(angle)*overlap*0.5;
+                p1.y -= sin(angle)*overlap*0.5;
+                p2.x += cos(angle)*overlap*0.5;
+                p2.y += sin(angle)*overlap*0.5;
               } else if (!p1.pinned && p2.pinned) {
-                p1.x -= cos(angle) * overlap;
-                p1.y -= sin(angle) * overlap;
+                p1.x -= cos(angle)*overlap;
+                p1.y -= sin(angle)*overlap;
               } else if (p1.pinned && !p2.pinned) {
-                p2.x += cos(angle) * overlap;
-                p2.y += sin(angle) * overlap;
+                p2.x += cos(angle)*overlap;
+                p2.y += sin(angle)*overlap;
               }
             }
           }
         }
       }
 
-      // 3D Dragging: pick a point near the mouse click
+      // 3D Dragging: When in "drag" mode, pick a point near the mouse click.
       function mousePressed() {
-        let closest = null;
-        let closestDist = 10;
-        for (let i = 0; i < clothPoints.length; i++) {
-          let p = clothPoints[i];
-          let sx = modelX(p.x, p.y, p.z);
-          let sy = modelY(p.x, p.y, p.z);
-          let d = dist(mouseX, mouseY, sx, sy);
-          if (d < closestDist) {
-            closestDist = d;
-            closest = i;
+        if (interactionMode === "drag") {
+          let closest = null;
+          let closestDist = 10;
+          for (let i = 0; i < clothPoints.length; i++) {
+            let p = clothPoints[i];
+            let sx = modelX(p.x, p.y, p.z);
+            let sy = modelY(p.x, p.y, p.z);
+            let d = dist(mouseX, mouseY, sx, sy);
+            if (d < closestDist) {
+              closestDist = d;
+              closest = i;
+            }
           }
-        }
-        if (closest !== null) {
-          dragPointIndex = closest;
-          dragPlaneZ = clothPoints[closest].z;
+          if (closest !== null) {
+            dragPointIndex = closest;
+            dragPlaneZ = clothPoints[closest].z;
+          }
         }
       }
 
@@ -671,7 +696,7 @@
       }
 
       function mouseDragged() {
-        if (dragPointIndex !== null) {
+        if (interactionMode === "drag" && dragPointIndex !== null) {
           let newPos = unproject(mouseX, mouseY, dragPlaneZ);
           let p = clothPoints[dragPointIndex];
           p.x = newPos.x;
@@ -695,7 +720,11 @@
           doResetOrientation = false;
         }
       
-        orbitControl();
+        // Only enable orbitControl if in "rotate" mode.
+        if (interactionMode === "rotate") {
+          orbitControl();
+        }
+      
         updateCloth();
       
         if (shadingOn) {
