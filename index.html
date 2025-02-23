@@ -100,7 +100,7 @@
       <h2>3D Cloth Simulation</h2>
       <p>
         Two main simulation modes: <strong>Plane</strong> or <strong>Draped</strong>.<br>
-        In Draped mode, choose <strong>Sphere</strong> or <strong>Cylinder</strong> as the form.
+        In Draped mode, choose <strong>Sphere</strong> or <strong>Cylinder</strong> for the form.
       </p>
 
       <!-- Simulation Mode -->
@@ -127,12 +127,12 @@
         <div class="paramHeader">Interaction Mode:</div>
         <div id="interactionRadioGroup"></div>
         <div class="paramDesc">
-          "Rotate" = move camera; "Drag" = pick cloth points.<br>
+          "Rotate" = move the camera; "Drag" = pick cloth points.<br>
           (Click "Reset Orientation" after loading.)
         </div>
       </div>
 
-      <!-- Pinning Mode (Plane only) -->
+      <!-- Pinning Mode (for Plane mode) -->
       <div class="parameter">
         <div class="paramHeader">Pinning Mode:</div>
         <div id="pinningRadio"></div>
@@ -195,32 +195,31 @@
       let grid = [], horizontal = [], vertical = [], centers = [];
 
       /* --- SHAPES --- */
-      // For Sphere mode: sphere bottom at y = 0, top at y = 200 (center at (0,100,0), radius = 100)
+      // Sphere mode: sphere with bottom at y = 0 and top at y = 200.
       let sphereCenter = { x: 0, y: 100, z: 0 };
       let sphereRadius = 100;
       
-      // For Cylinder mode: cylinder bottom at y = 0, top at y = 300 (radius = 100)
+      // Cylinder mode: cylinder with bottom at y = 0 and top at y = 300.
       let cylRadius = 100;
       let cylHeight = 300;
       let cylinderBottomY = 0;
       let cylinderTopY = 300;
 
-      /* --- GROUND PLANE --- */
-      // Ground plane at y = 0
+      /* --- GROUND --- */
+      // Ground plane is at y = 0.
       let groundY = 0;
 
       /* --- SIMULATION PARAMETERS --- */
       let damping = 0.98, iterations = 5, weight = 1.0, gravity = 0.4;
       let windX = 0.2, windY = 0, windZ = 0.1, windBuffer = 1.0;
       let dampingOn = false, iterationsOn = false, weightOn = false, gravityOn = false;
-      /* (Other parameters omitted for brevity) */
       let shadingOn = false;
 
       /* --- MODES --- */
-      let pinningMode = "top";         // Only for Plane mode
-      let interactionMode = "rotate";  // "rotate" or "drag"
-      let simulationMode = "plane";    // "plane" or "draped"
-      let formMode = "sphere";         // For Draped mode: "sphere" or "cylinder"
+      let pinningMode = "top";         // Only for Plane mode.
+      let interactionMode = "rotate";  // "rotate" or "drag".
+      let simulationMode = "plane";    // "plane" or "draped".
+      let formMode = "sphere";         // For Draped mode: "sphere" or "cylinder".
 
       /* --- CLOTH POSITIONING --- */
       let clothShiftX = -40;
@@ -239,7 +238,7 @@
       }
 
       function createUI() {
-        // Reset buttons
+        // Reset buttons.
         select("#resetBtn").mousePressed(setupCloth);
         select("#resetOrientationBtn").mousePressed(() => { doResetOrientation = true; });
         const playPauseBtn = select("#playPauseBtn");
@@ -248,7 +247,7 @@
           playPauseBtn.html(simulationRunning ? "Pause Simulation" : "Play Simulation");
         });
 
-        // Simulation Mode radio
+        // Simulation Mode radio.
         let simModeRadio = createRadio();
         simModeRadio.option("plane", "Plane");
         simModeRadio.option("draped", "Draped");
@@ -257,7 +256,7 @@
         simModeRadio.parent("simModeRadio");
         simModeRadio.changed(() => { simulationMode = simModeRadio.value(); setupCloth(); });
 
-        // Form Mode radio (only used if Draped)
+        // Form Mode radio (only for Draped mode).
         let formModeRadio = createRadio();
         formModeRadio.option("sphere", "Sphere");
         formModeRadio.option("cylinder", "Cylinder");
@@ -266,7 +265,7 @@
         formModeRadio.parent("formModeRadio");
         formModeRadio.changed(() => { formMode = formModeRadio.value(); if (simulationMode==="draped") setupCloth(); });
 
-        // Interaction Mode radio
+        // Interaction Mode radio.
         let interRadio = createRadio();
         interRadio.option("rotate", "Rotate");
         interRadio.option("drag", "Drag");
@@ -275,7 +274,7 @@
         interRadio.parent("interactionRadioGroup");
         interRadio.changed(() => { interactionMode = interRadio.value(); });
 
-        // Pinning Mode radio (Plane only)
+        // Pinning Mode radio (for Plane mode).
         let pinRadio = createRadio();
         pinRadio.option("top", "Top Pinned");
         pinRadio.option("corners", "Corner Pinned");
@@ -284,11 +283,11 @@
         pinRadio.parent("pinningRadio");
         pinRadio.changed(() => { pinningMode = pinRadio.value(); if (simulationMode==="plane") setupCloth(); });
 
-        // Minimal param toggles (Damping, Iterations, Weight, Gravity)
-        attachRadio("dampingRadioGroup", (on) => { dampingOn = on; }, "dampingContainer");
-        attachRadio("iterationsRadioGroup", (on) => { iterationsOn = on; }, "iterationsContainer");
-        attachRadio("weightRadioGroup", (on) => { weightOn = on; }, "weightContainer");
-        attachRadio("gravityRadioGroup", (on) => { gravityOn = on; }, "gravityContainer");
+        // Minimal parameter toggles: Damping, Iterations, Weight, Gravity.
+        attachRadio("dampingRadioGroup", (on)=>{ dampingOn = on; }, "dampingContainer");
+        attachRadio("iterationsRadioGroup", (on)=>{ iterationsOn = on; }, "iterationsContainer");
+        attachRadio("weightRadioGroup", (on)=>{ weightOn = on; }, "weightContainer");
+        attachRadio("gravityRadioGroup", (on)=>{ gravityOn = on; }, "gravityContainer");
 
         function attachRadio(parentId, callback, containerId) {
           let r = createRadio();
@@ -299,11 +298,11 @@
           r.selected("off");
           r.changed(() => {
             let val = r.value();
-            let on = (val === "on");
+            let on = (val==="on");
             callback(on);
-            if (containerId) {
-              if (on) select("#" + containerId).style("display", "block");
-              else select("#" + containerId).style("display", "none");
+            if(containerId) {
+              if(on) select("#"+containerId).style("display", "block");
+              else select("#"+containerId).style("display", "none");
             }
           });
         }
@@ -311,7 +310,7 @@
         function makeSlider(divId, cb, min, max, val, step) {
           let s = createSlider(min, max, val, step);
           s.parent(divId);
-          s.input(() => { cb(s.value()); });
+          s.input(()=>{ cb(s.value()); });
           cb(s.value());
         }
         makeSlider("dampingSlider", (v)=>{ damping=v; select("#dampingVal").html(nf(v,1,2)); }, 0.9, 1.0, 0.98, 0.01);
@@ -321,8 +320,12 @@
       }
 
       function setupCloth() {
-        clothPoints = []; clothConstraints = [];
-        grid = []; horizontal = []; vertical = []; centers = [];
+        clothPoints = [];
+        clothConstraints = [];
+        grid = [];
+        horizontal = [];
+        vertical = [];
+        centers = [];
         let clothWidth = (cols - 1) * spacing;
         let clothHeight = (rows - 1) * spacing;
 
@@ -332,13 +335,14 @@
           createClothPoints_Plane(startX, startY, 0);
         } else {
           if (formMode === "sphere") {
-            // Sphere: set sphere so that bottom is at y=0 and top at y=200
+            // Sphere: bottom at y = 0, top at y = 200 (center at (0,100,0)).
             sphereCenter = { x: 0, y: 100, z: 0 };
             sphereRadius = 100;
             let startY = sphereCenter.y + sphereRadius; // 200
             createClothPoints_Draped(-clothWidth/2, startY, -clothHeight/2);
             // Pin center at (0,200,0)
-            let midRow = Math.floor(rows/2), midCol = Math.floor(cols/2);
+            let midRow = Math.floor(rows/2);
+            let midCol = Math.floor(cols/2);
             let centerIdx = grid[midRow][midCol];
             clothPoints[centerIdx].pinned = true;
             clothPoints[centerIdx].x = 0;
@@ -348,15 +352,19 @@
             clothPoints[centerIdx].oldy = sphereCenter.y + sphereRadius;
             clothPoints[centerIdx].oldz = 0;
           } else if (formMode === "cylinder") {
-            // Cylinder: bottom at y=0, top at y=300.
-            let startY = cylinderTopY; // 300
+            // Cylinder: We want the cylinder to sit on the ground (y = 0) with top at y = 300.
+            // Set global values accordingly.
+            cylinderBottomY = 0;
+            cylinderTopY = 300;
+            let startY = cylinderTopY; // Cloth starts at y = 300 (touching the cylinder top)
             createClothPoints_Draped(-clothWidth/2, startY, -clothHeight/2);
             // Pin center at (0,300,0)
-            let midRow = Math.floor(rows/2), midCol = Math.floor(cols/2);
+            let midRow = Math.floor(rows/2);
+            let midCol = Math.floor(cols/2);
             let centerIdx = grid[midRow][midCol];
             clothPoints[centerIdx].pinned = true;
             clothPoints[centerIdx].x = 0;
-            clothPoints[centerIdx].y = cylinderTopY; // 300
+            clothPoints[centerIdx].y = cylinderTopY;
             clothPoints[centerIdx].z = 0;
             clothPoints[centerIdx].oldx = 0;
             clothPoints[centerIdx].oldy = cylinderTopY;
@@ -377,7 +385,7 @@
             if (pinningMode === "top") {
               pinned = (y === 0);
             } else if (pinningMode === "corners") {
-              pinned = ((x===0 && y===0) || (x===cols-1 && y===0) || (x===0 && y===rows-1) || (x===cols-1 && y===rows-1));
+              pinned = ((x === 0 && y === 0) || (x === cols-1 && y === 0) || (x === 0 && y === rows-1) || (x === cols-1 && y === rows-1));
             }
             clothPoints.push({ x: px, y: py, z: pz, oldx: px, oldy: py, oldz: pz, pinned: pinned });
             grid[y][x] = clothPoints.length - 1;
@@ -405,7 +413,9 @@
           for (let x = 0; x < cols - 1; x++) {
             let idxA = grid[y][x], idxB = grid[y][x+1];
             let A = clothPoints[idxA], B = clothPoints[idxB];
-            let mx = (A.x + B.x)*0.5, my = (A.y + B.y)*0.5, mz = (A.z + B.z)*0.5;
+            let mx = (A.x + B.x) * 0.5;
+            let my = (A.y + B.y) * 0.5;
+            let mz = (A.z + B.z) * 0.5;
             clothPoints.push({ x: mx, y: my, z: mz, oldx: mx, oldy: my, oldz: mz, pinned: false });
             horizontal[y][x] = clothPoints.length - 1;
           }
@@ -416,7 +426,9 @@
           for (let x = 0; x < cols; x++) {
             let idxA = grid[y][x], idxB = grid[y+1][x];
             let A = clothPoints[idxA], B = clothPoints[idxB];
-            let mx = (A.x + B.x)*0.5, my = (A.y + B.y)*0.5, mz = (A.z + B.z)*0.5;
+            let mx = (A.x + B.x) * 0.5;
+            let my = (A.y + B.y) * 0.5;
+            let mz = (A.z + B.z) * 0.5;
             clothPoints.push({ x: mx, y: my, z: mz, oldx: mx, oldy: my, oldz: mz, pinned: false });
             vertical[y][x] = clothPoints.length - 1;
           }
@@ -427,7 +439,9 @@
           for (let x = 0; x < cols - 1; x++) {
             let idxA = grid[y][x], idxB = grid[y][x+1], idxC = grid[y+1][x], idxD = grid[y+1][x+1];
             let A = clothPoints[idxA], B = clothPoints[idxB], C = clothPoints[idxC], D = clothPoints[idxD];
-            let mx = (A.x + B.x + C.x + D.x)*0.25, my = (A.y + B.y + C.y + D.y)*0.25, mz = (A.z + B.z + C.z + D.z)*0.25;
+            let mx = (A.x + B.x + C.x + D.x) * 0.25;
+            let my = (A.y + B.y + C.y + D.y) * 0.25;
+            let mz = (A.z + B.z + C.z + D.z) * 0.25;
             clothPoints.push({ x: mx, y: my, z: mz, oldx: mx, oldy: my, oldz: mz, pinned: false });
             centers[y][x] = clothPoints.length - 1;
           }
@@ -496,7 +510,7 @@
           } else if (formMode === "cylinder") {
             doCylinderCollision();
           }
-          doGroundCollision();
+          doFloorCollision();
         }
       }
 
@@ -539,9 +553,9 @@
               p.x += nx * overlap;
               p.y += ny * overlap;
               p.z += nz * overlap;
-              p.oldx = p.x - friction*(p.x - p.oldx);
-              p.oldy = p.y - friction*(p.y - p.oldy);
-              p.oldz = p.z - friction*(p.z - p.oldz);
+              p.oldx = p.x - friction * (p.x - p.oldx);
+              p.oldy = p.y - friction * (p.y - p.oldy);
+              p.oldz = p.z - friction * (p.z - p.oldz);
             }
           }
         }
@@ -551,29 +565,29 @@
         const friction = 0.5;
         for (let p of clothPoints) {
           if (!p.pinned) {
-            // Only check if the point is between the cylinder's bottom and top
-            if (p.y >= cylinderBottomY && p.y <= cylinderTopY) {
+            // For cylinder mode: cylinder bottom at y=0, top at y=300.
+            if (p.y >= groundY && p.y <= cylinderTopY) {
               let r = sqrt(p.x*p.x + p.z*p.z);
               if (r < cylRadius) {
                 let overlap = cylRadius - r;
-                let nx = p.x/r, nz = p.z/r;
+                let nx = p.x / r, nz = p.z / r;
                 p.x += nx * overlap;
                 p.z += nz * overlap;
-                p.oldx = p.x - friction*(p.x - p.oldx);
-                p.oldz = p.z - friction*(p.z - p.oldz);
+                p.oldx = p.x - friction * (p.x - p.oldx);
+                p.oldz = p.z - friction * (p.z - p.oldz);
               }
             }
           }
         }
       }
 
-      function doGroundCollision() {
-        // Clamp cloth so that y is not below groundY (0)
+      function doFloorCollision() {
+        // Clamp cloth so that it does not go below the ground (y = 0)
         const friction = 0.5;
         for (let p of clothPoints) {
           if (!p.pinned && p.y < groundY) {
             p.y = groundY;
-            p.oldy = p.y - friction*(p.y - p.oldy);
+            p.oldy = p.y - friction * (p.y - p.oldy);
           }
         }
       }
@@ -581,7 +595,8 @@
       /* 3D Dragging */
       function mousePressed() {
         if (interactionMode === "drag") {
-          let closest = null, closestDist = 10;
+          let closest = null;
+          let closestDist = 10;
           for (let i = 0; i < clothPoints.length; i++) {
             let p = clothPoints[i];
             let sx = modelX(p.x, p.y, p.z), sy = modelY(p.x, p.y, p.z);
@@ -595,7 +610,7 @@
       function unproject(mx, my, fixedZ) {
         let d = (height/2) / tan(PI*30/180);
         let nx = mx - width/2, ny = my - height/2;
-        let factor = (d+fixedZ)/d;
+        let factor = (d + fixedZ) / d;
         return createVector(nx*factor, ny*factor, fixedZ);
       }
 
@@ -613,6 +628,7 @@
       function draw() {
         background(30);
         if (doResetOrientation) {
+          // Set a camera that looks from above
           camera(0, 600, 600, 0, 150, 0, 0, 1, 0);
           doResetOrientation = false;
         }
@@ -623,20 +639,19 @@
           noStroke();
           fill("#222"); // dark gray for shapes
           if (formMode === "sphere") {
-            // Sphere: bottom at y=0, top at y=200 (center at y=100)
+            // Sphere: bottom at y=0, top at y=200 (center at (0,100,0))
             push();
             translate(sphereCenter.x, sphereCenter.y, sphereCenter.z);
             sphere(sphereRadius);
             pop();
           } else if (formMode === "cylinder") {
-            // Cylinder: bottom at y=0, top at y=300; draw cylinder with midpoint at y=150
+            // Cylinder: bottom at y=0, top at y=300.
             push();
-            translate(0, (cylinderBottomY + cylinderTopY)/2, 0);
-            cylinder(cylRadius, cylHeight);
+            translate(0, (cylinderBottomY + cylinderTopY)/2, 0); // midpoint = 150
+            cylinder(cylRadius, cylinderTopY - cylinderBottomY);
             pop();
           }
-          // Optionally draw the ground plane (here invisible)
-          // push(); translate(0, groundY, 0); noFill(); plane(1000,1000); pop();
+          // (Ground is at y=0; we do not draw it visibly.)
         }
 
         if (shadingOn) {
@@ -649,13 +664,13 @@
             }
           }
           noStroke();
-          for (let y = 0; y < rows-1; y++) {
-            for (let x = 0; x < cols-1; x++) {
+          for (let y = 0; y < rows - 1; y++) {
+            for (let x = 0; x < cols - 1; x++) {
               let A = clothPoints[grid[y][x]];
               let B = clothPoints[grid[y][x+1]];
               let C = clothPoints[grid[y+1][x+1]];
               let D = clothPoints[grid[y+1][x]];
-              let avgY = (A.y+B.y+C.y+D.y)*0.25;
+              let avgY = (A.y + B.y + C.y + D.y) * 0.25;
               let bright = map(avgY, minY, maxY, 220, 80);
               fill(bright);
               beginShape();
