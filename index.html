@@ -280,8 +280,8 @@
       // making it appear taller & higher in the scene.
       let cylRadius = 100;
       let cylHeight = 300;
-      let cylinderTopY = -50;           // top face at y = -50
-      let cylinderBottomY = cylinderTopY - cylHeight; // bottom face at y = -350
+      let cylinderTopY = cylinderBottomY + cylHeight; // bottom face at y = -350
+      let cylinderBottomY = 150;           // top face at y = -50
 
       /* Invisible floor for Draped mode */
       let floorY = 150; // cloth cannot go below y = 150
